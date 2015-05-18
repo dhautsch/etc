@@ -1,0 +1,5 @@
+#!/bin/sh
+
+JAVA_HOME=/home/don/jdk1.7.0_25/jre; export JAVA_HOME
+PATH=$JAVA_HOME/bin:$PATH
+exec java -jar $HOME/Downloads/jython-standalone-2.5.3.jar $*

@@ -1,0 +1,125 @@
+don@samsung-ubuntu:~/git/MySchool$ heroku apps:info
+=== pacific-oasis-****
+Addons:        heroku-postgresql:dev
+Collaborators: denisputnam@****
+Git URL:       git@heroku.com:pacific-oasis-***.git
+Owner Email:   don@****
+Region:        us
+Repo Size:     24M
+Slug Size:     178M
+Stack:         cedar
+Web URL:       http://pacific-oasis-****.herokuapp.com/
+
+don@samsung-ubuntu:~/git/MySchool$ heroku apps:info --shell
+addons=heroku-postgresql:dev
+archived_at=
+buildpack_provided_description=Java
+collaborators=denisputnam@****
+create_status=complete
+created_at=2013/10/29 23:32:27 -0700
+domain_name=pacific-oasis-****.herokuapp.com
+dynos=1
+git_url=git@heroku.com:pacific-oasis-****.git
+id=19010697
+name=pacific-oasis-****
+owner_delinquent=false
+owner_email=don@****
+owner_name=
+region=us
+released_at=2014/06/09 19:56:04 -0700
+repo_migrate_status=complete
+repo_size=25714688
+requested_stack=
+slug_size=187346024
+stack=cedar
+updated_at=2014/06/09 19:56:04 -0700
+web_url=http://pacific-oasis-****.herokuapp.com/
+workers=0
+
+
+https://devcenter.heroku.com/articles/getting-started-with-spring-mvc-hibernate
+
+don@samsung-ubuntu:~/git/MySchool$ heroku create
+Creating pacific-oasis-****... done, stack is cedar
+http://pacific-oasis-****.herokuapp.com/ | git@heroku.com:pacific-oasis-****.git
+Git remote heroku added
+don@samsung-ubuntu:~/git/MySchool$ 
+
+#
+# deploy to heroku
+#
+cd ~/git/MySchool && git push heroku master
+
+#
+# show deployments.
+# see heroku help releases on how to rollback
+#
+cd ~/git/MySchool && heroku releases
+
+#
+# check the state of the app’s dynos
+#
+cd ~/git/MySchool && heroku ps
+
+#
+# run a remote command
+#
+cd ~/git/MySchool && heroku run ls -la
+cd ~/git/MySchool && heroku run bash
+
+#
+# get database url
+#
+cd ~/git/MySchool && heroku config | grep DATABASE_URL
+
+#
+# connect to heroku database
+#
+cd ~/git/MySchool && heroku pg:psql
+
+#
+# manage maint mode
+#
+heroku maintenance:on
+heroku maintenance:off
+
+#
+# Delete all data in DATABASE
+#
+cd ~/git/MySchool && heroku pg:reset DATABASE_URL
+
+#
+# continuous tail of logs
+#
+cd ~/git/MySchool && heroku logs -t
+
+#
+# get url
+#
+cd ~/git/MySchool && heroku apps:info|perl -lane 'print $F[2] if m/Web/'
+
+#
+# visit the app in our browser
+#
+cd ~/git/MySchool && heroku apps:open
+
+#
+# To reset database
+# 1) put in maint mode
+# 2) stop dyno
+# 3) check dyno is idle
+# 4) reset database.
+# 5) connect to database and do \d to see its empty.
+# 6) bounce dyno which should recreate db tables according to persistenance.xml
+# 7) connect to database and do \d to see tables
+# 8) remove maint mode
+#
+cd ~/git/MySchool
+heroku maintenance:on
+heroku ps:stop web.1
+heroku ps
+heroku pg:reset DATABASE_URL
+heroku pg:psql
+heroku ps:restart web.1
+heroku pg:psql
+heroku maintenance:off

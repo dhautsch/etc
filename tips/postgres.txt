@@ -1,0 +1,39 @@
+#
+# sudo to postgres and login to main postgres
+# database as postgres, defaults to system
+# login id in this case postgres
+#
+sudo -u postgres psql postgres
+
+# see version of postgres
+select version();
+
+# see current users/roles
+\dg
+
+# create user
+CREATE USER scott with PASSWORD 'tiger';
+
+# change pw
+ALTER USER username WITH PASSWORD 'tmppassword';
+
+# list databases
+\l
+
+# drop datbase
+DROP DATABASE myapp;
+
+CREATE DATABASE myapp WITH OWNER scott;
+
+# list of all the tables
+\d
+
+# connect to new database,ie, \c myapp
+\c[onnect] [DBNAME|- USER|- HOST|- PORT|-]
+
+# display information about current connection
+\conninfo
+
+# quit
+\q
+

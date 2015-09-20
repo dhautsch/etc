@@ -1,0 +1,2 @@
+--- ISO timestamp
+select to_char(sysdate, 'YYYY-MM-DD"T"HH24:MI:SS') from dual

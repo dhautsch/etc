@@ -24,3 +24,10 @@ from
 from (your_query) a
 where rownum <= :M )
 where rnum >= :N;
+
+-- upsert
+WHEN MATCHED THEN
+  UPDATE SET s.date_processes = 'Tue Sep 22 17:02:22 EDT 2015', s.status = 'Available and backed up'
+WHEN NOT MATCHED THEN
+  INSERT (s.env_name, s.domain_name, s.service_name, s.host_name, s.date_processes, s.status)
+  VALUES ('Domain_Multi_mdev1_961', 'Domain_Multi_mdev1', 'FILES', 'dlmulti-ap101', 'Tue Sep 22 17:02:22 EDT 2015', 'Available and backed up')

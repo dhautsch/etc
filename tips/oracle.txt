@@ -26,8 +26,13 @@ where rownum <= :M )
 where rnum >= :N;
 
 -- upsert
+MERGE INTO services s
+USING dual
+ON (env_name = 'Domain_Multi_mdev1_961' and domain_name = 'Domain_Multi_mdev1' and service_name = 'FILES' and host_name = 'dlmulti-ap101')
 WHEN MATCHED THEN
-  UPDATE SET s.date_processes = 'Tue Sep 22 17:02:22 EDT 2015', s.status = 'Available and backed up'
+  UPDATE SET date_processes = 'Tue Sep 22 17:02:22 EDT 2015', status = 'Available and backed up'
 WHEN NOT MATCHED THEN
-  INSERT (s.env_name, s.domain_name, s.service_name, s.host_name, s.date_processes, s.status)
+  INSERT (env_name, domain_name, service_name, host_name, date_processes, status)
   VALUES ('Domain_Multi_mdev1_961', 'Domain_Multi_mdev1', 'FILES', 'dlmulti-ap101', 'Tue Sep 22 17:02:22 EDT 2015', 'Available and backed up')
+
+

@@ -50,7 +50,11 @@ public class XmlPath {
 
 				xmlPath_ = new XmlPath();
 
-				xmlPath_.setXmlDocument(new File(args[1]));
+				if (args[1].equals("-"))
+					xmlPath_.setXmlDocument(System.in);
+				else
+					xmlPath_.setXmlDocument(new File(args[1]));
+
 				al_ = xmlPath_.xpathToNodeList(args[2]);
 
 				for (int i_ = 0; i_ < al_.size(); i_++)

@@ -264,6 +264,9 @@ public class XmlPath {
 		if (doc != null && sr != null)
 			try {
 				TransformerFactory tf = TransformerFactory.newInstance();
+				
+				tf.setAttribute("indent-number", 2);
+				
 				Transformer transformer = tf.newTransformer();
 
 				transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION,

@@ -37,9 +37,25 @@ public class SPRest {
 
 	public static void main(String[] args) throws Exception {
 		Authenticator.setDefault(new MyAuthenticator());
-		String url_ = "http://sharepoint/eso-sites/etlinfraeng/etl/_api/lists/getbytitle('Tasks')/items";
-		Document doc_ = get(url_);
-		ArrayList<HashMap<String, String>> al_ = getItems(doc_);
+		String metaDataUrl_ = "http://sharepoint/eso-sites/etlinfraeng/etl/_api/lists/getbytitle('Tasks')";
+		String itemsUrl_ = metaDataUrl_ + "/items";
+		Document doc_;
+		ArrayList<HashMap<String, String>> al_;
+		
+		// Get List Meta Data
+		doc_ = get(metaDataUrl_);
+		al_ = getItems(doc_);
+
+		for (int i_ = 0; i_ < al_.size(); i_++) {
+			for (String k_ : al_.get(i_).keySet()) {
+				System.out.println("MetaData[" + i_ + "]." + k_ + "='"
+						+ al_.get(i_).get(k_) + "'");
+			}
+		}
+		
+		// Get List Items
+		doc_ = get(itemsUrl_);
+		al_ = getItems(doc_);
 
 		for (int i_ = 0; i_ < al_.size(); i_++) {
 			for (String k_ : al_.get(i_).keySet()) {
@@ -47,16 +63,17 @@ public class SPRest {
 						+ al_.get(i_).get(k_) + "'");
 			}
 		}
-		
+
 		String data_ = "{ "
 						+ " '_metadata': { 'type': 'SP.Data.TasksListItem' }"
 						+ ", 'Title': 'Added by rest api'"
 						+ ", 'Priority': '(2) Normal'"
 						+ ", 'Status': 'Not Started'"
 						+ ", 'AssignedToId': '3093'"
+						+ ", 'StartDate':'2014-01-29T08:00:00Z', 'DueDate':'2014-01-31T08:00:00Z',"
 						+ " }";
 
-		doc_ = post(url_, data_);
+		doc_ = post(itemsUrl_, data_);
 		
 		System.out.println(prettyPrintXml(doc_));
 	}

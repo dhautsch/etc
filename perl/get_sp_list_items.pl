@@ -67,7 +67,7 @@ my $EXIT = 1;
 
 END { whackTmpDirList(); exit($EXIT) };
 
-$OPTS{help}++ unless GetOptions(\%OPTS, qw(help meta verbose));
+$OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml meta verbose));
 
 $OPTS{help}++ unless @ARGV == 2;
 
@@ -76,6 +76,7 @@ if ($OPTS{help}) {
 	print STDERR "\t-help : print this message.\n";
 	print STDERR "\t-meta : print list metadata instead of items.\n";
 	print STDERR "\t-verbose : print curl output to STDERR.\n";
+	print STDERR "\t-xml : output xml.\n";
 	exit($EXIT);
 }
 
@@ -129,7 +130,10 @@ if ($PROPS{$SHAREPOINT_CONN_PROP}) {
 		}
 	}
 
-	if (-f $GET_LIST_RESPONSE_XML) {
+	if (-f $GET_LIST_RESPONSE_XML && $OPTS{xml}) {
+		print qx(cat $GET_LIST_RESPONSE_XML);
+	}
+	elsif (-f $GET_LIST_RESPONSE_XML) {
 		my $s_ = qx(cat $GET_LIST_RESPONSE_XML);
 		my @pos_;
 		my @data_;

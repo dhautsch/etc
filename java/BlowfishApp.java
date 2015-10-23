@@ -32,7 +32,7 @@ public class DecryptString extends Application {
 
 	@Override
 	public void start(Stage primaryStage) {
-		primaryStage.setTitle("JavaFX Welcome");
+		primaryStage.setTitle("JavaFX Welcome - 20151023");
 		GridPane grid = new GridPane();
 		grid.setAlignment(Pos.CENTER);
 		grid.setHgap(10);

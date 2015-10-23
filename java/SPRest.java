@@ -28,7 +28,7 @@ public class SPRest {
 			// and Negotiate, the usrname and password are all the same.
 			// System.err.println("Feeding username and password for " +
 			// getRequestingScheme());
-			String user_ = "FANNIEMAE\\r2udeh";
+			String user_ = "DOMAIN\\uid";
 			String pass_ = "PASSWORD";
 			
 			return (new PasswordAuthentication(user_, pass_.toCharArray()));

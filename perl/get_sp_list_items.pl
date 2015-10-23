@@ -1,51 +1,4 @@
 #!/usr/bin/perl
-# 
-#
-# # Following is example code - don@hautsch.com
-#
-# use Data::Dumper;
-# use strict;
-# 
-# my @array_ = getMeta(qw(http://sharepoint/eso-sites/etlinfraeng/etl bogusTasks));
-# print Dumper(\@array_); # Should see error message
-# 
-# @array_ = getMeta(qw(http://sharepoint/eso-sites/etlinfraeng/etl Tasks));
-# print Dumper(\@array_);
-# 
-# @array_ = getItems(qw(http://sharepoint/eso-sites/etlinfraeng/etl Tasks));
-# print Dumper(\@array_);
-# 
-# sub getMeta {
-# 	my $url_ = shift;
-# 	my $list_ = shift;
-# 	my @items_;
-# 
-# 	if ($url_ && $list_) {
-# 		my $VAR1 = qx(./get_sp_list_items.pl -meta $url_ $list_);
-# 
-# 		if ($VAR1) {
-# 			eval $VAR1;
-# 			@items_ = @$VAR1;
-# 		}
-# 	}
-# }
-# 
-# sub getItems {
-# 	my $url_ = shift;
-# 	my $list_ = shift;
-# 	my @items_;
-# 
-# 	if ($url_ && $list_) {
-# 		my $VAR1 = qx(./get_sp_list_items.pl $url_ $list_);
-# 
-# 		if ($VAR1) {
-# 			eval $VAR1;
-# 			@items_ = @$VAR1;
-# 		}
-# 	}
-# }
-
-
 
 use Getopt::Long;
 use Data::Dumper;
@@ -67,16 +20,24 @@ my $EXIT = 1;
 
 END { whackTmpDirList(); exit($EXIT) };
 
-$OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml meta verbose));
+$OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml meta verbose example));
+
+if ($OPTS{example}) {
+	while (<DATA>) {
+		print;
+	}
+	exit($EXIT);
+}
 
 $OPTS{help}++ unless @ARGV == 2;
 
 if ($OPTS{help}) {
-	print STDERR "Usage : $0 [-help -meta -verbose -xml] <URL> <LIST_TITLE>\n";
+	print STDERR "Usage : $0 [-help -meta -verbose -xml -example] <URL> <LIST_TITLE>\n";
 	print STDERR "\t-help : print this message.\n";
 	print STDERR "\t-meta : print list metadata instead of items.\n";
 	print STDERR "\t-verbose : print curl output to STDERR.\n";
 	print STDERR "\t-xml : output xml.\n";
+	print STDERR "\t-example : show example code.\n";
 	exit($EXIT);
 }
 
@@ -187,3 +148,50 @@ if ($PROPS{$SHAREPOINT_CONN_PROP}) {
 }
 
 exit($EXIT);
+
+__DATA__
+#
+# Following is example code - don@hautsch.com
+#
+use Data::Dumper;
+use strict;
+
+my @array_ = getMeta(qw(http://sharepoint/eso-sites/etlinfraeng/etl bogusTasks));
+print Dumper(\@array_); # Should see error message
+
+@array_ = getMeta(qw(http://sharepoint/eso-sites/etlinfraeng/etl Tasks));
+print Dumper(\@array_);
+
+@array_ = getItems(qw(http://sharepoint/eso-sites/etlinfraeng/etl Tasks));
+print Dumper(\@array_);
+
+sub getMeta {
+	my $url_ = shift;
+	my $list_ = shift;
+	my @items_;
+
+	if ($url_ && $list_) {
+		my $VAR1 = qx(./get_sp_list_items.pl -meta $url_ $list_);
+
+		if ($VAR1) {
+			eval $VAR1;
+			@items_ = @$VAR1;
+		}
+	}
+}
+
+sub getItems {
+	my $url_ = shift;
+	my $list_ = shift;
+	my @items_;
+
+	if ($url_ && $list_) {
+		my $VAR1 = qx(./get_sp_list_items.pl $url_ $list_);
+
+		if ($VAR1) {
+			eval $VAR1;
+			@items_ = @$VAR1;
+		}
+	}
+}
+

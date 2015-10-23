@@ -178,6 +178,7 @@ sub getMeta {
 			@items_ = @$VAR1;
 		}
 	}
+	return @items_;
 }
 
 sub getItems {
@@ -193,5 +194,6 @@ sub getItems {
 			@items_ = @$VAR1;
 		}
 	}
+	return @items_;
 }
 

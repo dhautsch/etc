@@ -21,8 +21,8 @@ import javax.crypto.spec.SecretKeySpec;
 public class DecryptString extends Application {
 	final static String HEX_STRING = "0123456789ABCDEF";
 	// following keys are bogus but their lengths are correct
-	final static char[] SHORT_KEY   =  {'{','1','0','1','0','A','A','A','A','-','1','1','1','1','-','1'};
 	final static char[] SIPERIAN_KEY = {'{','1','0','1','0','A','A','A','A','-','1','1','1','1','-','1','1','1','1','-','1','1','1','1','-','1','1','1','1','1','1','1','1','1','1','1','1','}',0};
+	final static char[] SHORT_KEY   =  (new String(SIPERIAN_KEY)).substring(0, 16).toCharArray();
 	/**
 	 * @param args
 	 */

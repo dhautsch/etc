@@ -72,7 +72,7 @@ $OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml meta verbose));
 $OPTS{help}++ unless @ARGV == 2;
 
 if ($OPTS{help}) {
-	print STDERR "Usage : $0 [-help -meta -verbose] <URL> <LIST_TITLE>\n";
+	print STDERR "Usage : $0 [-help -meta -verbose -xml] <URL> <LIST_TITLE>\n";
 	print STDERR "\t-help : print this message.\n";
 	print STDERR "\t-meta : print list metadata instead of items.\n";
 	print STDERR "\t-verbose : print curl output to STDERR.\n";

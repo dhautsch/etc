@@ -1,3 +1,6 @@
+-- get user/sid
+SELECT user || '@' || SYS_CONTEXT('USERENV','DB_NAME') from dual
+
 --- ISO timestamp
 select to_char(sysdate, 'YYYY-MM-DD"T"HH24:MI:SS') from dual
 

@@ -183,6 +183,7 @@ public class LDAPExample {
 									+ group_ + wrapEndElem(groupCnElem_));
 						}
 
+						ArrayList<String> ownerPeople_ = new ArrayList<String>();
 						ArrayList<String> groupPeople_ = new ArrayList<String>();
 
 						for (String attrId_ : _groupAttrs) {
@@ -196,7 +197,7 @@ public class LDAPExample {
 									if (matcher_.find()) {
 										uid_ = matcher_.group(1);
 
-										groupPeople_.add(uid_);
+										ownerPeople_.add(uid_);
 
 										System.out.println(wrapBegElem(elem_)
 												+ uid_ + wrapEndElem(elem_));
@@ -218,6 +219,8 @@ public class LDAPExample {
 						}
 
 						Collections.sort(groupPeople_);
+
+						printUsers(groupElem_.concat("_owner"), ownerPeople_);
 
 						printUsers(groupElem_.concat("_member"), groupPeople_);
 

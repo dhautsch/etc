@@ -21,6 +21,10 @@ END;
 /
 
 --- Correlated Update
+--- Updates only those employees who work in Geneva or Munich (locations 2900 and 2700)
+--- Sets department_id for these employees to the department_id corresponding to Bombay (location_id 2100)
+--- Sets each employee's salary to 1.1 times the average salary of their department
+--- Sets each employee's commission to 1.5 times the average commission of their department
 UPDATE employees a 
     SET department_id = 
         (SELECT department_id 

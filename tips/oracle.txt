@@ -3,6 +3,7 @@ SELECT user || '@' || SYS_CONTEXT('USERENV','DB_NAME') from dual
 
 --- ISO timestamp
 select to_char(sysdate, 'YYYY-MM-DD"T"HH24:MI:SS') from dual
+select to_date('2015-11-24 00:00:00', 'YYYY-MM-DD HH24:MI:SS') from dual
 
 --- Implicit Cursor FOR LOOP Statement
 BEGIN

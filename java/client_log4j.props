@@ -1,0 +1,16 @@
+#
+# Change log4j.appender.FileLog.File to log file path.
+# Change log4j.rootCategory and log4j.logger.org.jboss.ejb.client log4j level
+# Call java with -Dlog4j.configuration=file:<DIR>/client_log4j.props
+#
+log4j.appender.ConsoleLog.layout=org.apache.log4j.PatternLayout
+log4j.appender.FileLog.File=/appl/bk1devl/don/handle_users/MdmAutomation_problem_20151214/MdmAutomation.log
+log4j.appender.FileLog.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+log4j.appender.FileLogging.MaxFileSize=5000KB
+log4j.appender.FileLog.layout=org.apache.log4j.PatternLayout
+log4j.appender.ConsoleLog.layout.ConversionPattern=%d [%t] %-5p %c - %m%n
+log4j.appender.ConsoleLog=org.apache.log4j.ConsoleAppender
+log4j.appender.FileLogging.MaxBackupIndex=2
+log4j.appender.FileLog=org.apache.log4j.RollingFileAppender
+log4j.rootCategory=DEBUG, FileLog, ConsoleLog
+log4j.logger.org.jboss.ejb.client=DEBUG

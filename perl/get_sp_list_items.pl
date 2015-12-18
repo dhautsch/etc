@@ -211,7 +211,7 @@ sub getItems {
 
 	if ($url_ && $list_) {
 		if ($query_) {
-			$query_ .= "-query '$query_'";
+			$query_ = "-query '$query_'";
 		}
 
 		my $VAR1 = qx(./get_sp_list_items.pl $query_ $url_ $list_);

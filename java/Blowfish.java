@@ -7,9 +7,9 @@ import javax.crypto.spec.SecretKeySpec;
 public class Blowfish {
 
 	/**
-	 * Returns argv[0] decrypted string. The string has to be encrypted using com.siperian.common.security.Blowfish
-	 * with the key in final static char [] _key or use the runnable DecodeSiperianPassword.jar JavaFX application
-	 * to encrypt the string.
+	 * Returns argv[0] decrypted string. The string has to be encrypted using -Dencrypt=t
+	 * with the key in final static char [] SHORT_KEY or use the runnable BlowfishApp.jar
+	 * JavaFX application to encrypt the string.
 	 * If the decrypted string is in one of the following forms:
 	 *                            string:uid
 	 *                            string:uid0,uid1,...

@@ -8,7 +8,7 @@ use ETLSuppUtils;
 use strict;
 
 my %PROPS = readProps("$ENV{HOME}/etlsupp/config.properties");
-my $SHAREPOINT_CONN_PROP = 'com.company.a22.sharepoint_conn';
+my $SHAREPOINT_CONN_PROP = 'com.fanniemae.a22.sharepoint_conn';
 my $TMP_DIR = getTmpDirName();
 my $GET_LIST_RESPONSE_XML = "$TMP_DIR/GetListResponse.xml";
 my $HTML_HEADER = "'Accept: application/atom+xml; charset=utf-8'";
@@ -18,9 +18,9 @@ my $CURL_KSH = "$TMP_DIR/curl.ksh";
 my %OPTS;
 my $EXIT = 1;
 
-END { whackTmpDirList(); exit($EXIT) };
+END { whackTmpDirList() unless $OPTS{keeptmp}; exit($EXIT) };
 
-$OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml meta verbose query=s example));
+$OPTS{help}++ unless GetOptions(\%OPTS, qw(keeptmp help xml meta verbose query=s example));
 
 if ($OPTS{example}) {
 	while (<DATA>) {
@@ -120,35 +120,62 @@ if ($PROPS{$SHAREPOINT_CONN_PROP}) {
 		my $s_ = qx(cat $GET_LIST_RESPONSE_XML);
 		my @pos_;
 		my @data_;
+		my $badXML_;
 
 		while ($s_ =~ m!(<content|</content>)!g) {
 			push @pos_, pos($s_);
 		}
 
 		while (scalar(@pos_)) {
+			next if $badXML_;
+
 			my $x_ = shift @pos_;
 			my $y_ = shift @pos_;
 			my $prop_ = substr($s_, $x_, $y_ - $x_);
 			my %h_;
 
-			$prop_ =~ s!^.*<m:properties>!!;
-			$prop_ =~ s!</m:properties>.*!!;
+			if ($prop_ =~ s!^.*<m:properties>!! && $prop_ =~ s!</m:properties>.*!!) {
+				my $i_;
 
-			while ($prop_ =~ m!(<[^>]+>[^<]+</[^>]+>)!g) {
-				my $e_ = $1;
+				while ($prop_) {
+					if ($prop_ =~ m!^<([^>]+)>!) {
+						my $m_ = $1;
+						my @a_ = split(/\s+/, $m_);
+						my $e_ = $a_[0];
 
-				if ($e_ =~ m!(<[^>]+>)([^<]+)(<[^>]+>)!) {
-					my $v_ = $2;
-					my $k_ = $1;
+						if ($e_) {
+							if ($prop_ =~ s!^<${e_}[^/>]*/>!!) {
+								$h_{$e_} = undef;
+							}
+							elsif ($prop_ =~ s!^<${e_}[^>]*>(.*)\</$e_\>!!) {
+								my $m_ = $1;
 
-					$k_ =~ s![<>]!!g;
-					$k_ =~ s!\s.*!!g;
+								$h_{$e_} = $m_;
+							}
+							else {
+								$badXML_ = $prop_;
+							}
+						}
+						else {
+							$badXML_ = $prop_;
+						}
+					}
+					else {
+						$badXML_ = $prop_;
+					}
 
-					$h_{$k_} = $v_;
+					$i_++;
+					$badXML_ = $prop_ if $i_ > 100;
+					$prop_ = undef if $badXML_;
+				}
+
+				if ($badXML_) {
+					push @data_, { 'm:error' => $badXML_ };
+				}
+				else {
+					push @data_, { %h_ };
 				}
 			}
-
-			push @data_, { %h_ };
 		}
 
 		unless (scalar(@data_)) {

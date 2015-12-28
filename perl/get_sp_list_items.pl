@@ -8,7 +8,7 @@ use ETLSuppUtils;
 use strict;
 
 my %PROPS = readProps("$ENV{HOME}/etlsupp/config.properties");
-my $SHAREPOINT_CONN_PROP = 'com.fanniemae.a22.sharepoint_conn';
+my $SHAREPOINT_CONN_PROP = 'com.company.a22.sharepoint_conn';
 my $TMP_DIR = getTmpDirName();
 my $GET_LIST_RESPONSE_XML = "$TMP_DIR/GetListResponse.xml";
 my $HTML_HEADER = "'Accept: application/atom+xml; charset=utf-8'";

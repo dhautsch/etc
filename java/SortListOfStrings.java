@@ -8,7 +8,7 @@ import java.util.TreeMap;
 public class SortListOfStrings {
 
 	public static void main(String[] args) {
-		List<String> words_ = new ArrayList<String>(50);
+		ArrayList<String> words_ = new ArrayList<String>(50);
 		words_.add("once");
 		words_.add("upon");
 		words_.add("a");

@@ -318,12 +318,20 @@ get_sp_list_items.pl \
 	-create "$DIGEST" -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" \
 	http://sharepoint/eso-sites/etlinfraeng/etl Bogus
 
+echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" | \
+	get_sp_list_items.pl -create "$DIGEST" -data @- \
+	http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+
 get_sp_list_items.pl \
 	-create "$DIGEST" -data "@create_data.txt" \
 	http://sharepoint/eso-sites/etlinfraeng/etl Bogus
 
 get_sp_list_items.pl \
 	-update "$DIGEST" -id $ID -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" \
+	http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+
+echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" | \
+	get_sp_list_items.pl -update "$DIGEST" -id $ID -data @- \
 	http://sharepoint/eso-sites/etlinfraeng/etl Bogus
 
 get_sp_list_items.pl \

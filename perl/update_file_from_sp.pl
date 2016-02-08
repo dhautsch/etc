@@ -54,7 +54,9 @@ if ($SP_ITEM_CNT < 0) {
 }
 
 if ($SP_UPDT > $CMP_UPDT) {
-	open(FILE, ">$ARGV[2]") or die "Wopen $ARGV[2] failed : $!";
+	my $tmp_ = dirname($ARGV[2]) . "/$$-" . basename($ARGV[2]);
+
+	open(FILE, ">$tmp_") or die "Wopen $tmp_ failed : $!";
 
 	foreach (qx($SP_CMD -query '\$top=$SP_ITEM_CNT' @ARGV[0..1])) {
 		$EXIT = 0 if m!\$VAR1!;
@@ -62,6 +64,8 @@ if ($SP_UPDT > $CMP_UPDT) {
 		print FILE;
 	}
 	close(FILE);
+
+	rename($tmp_, $ARGV[2]) or die "Rename $tmp_ to $ARGV[2] failed : $!";
 }
 elsif ($CMP_UPDT) {
 	$EXIT = 0;

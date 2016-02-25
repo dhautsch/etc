@@ -1,3 +1,11 @@
+-- WITH clause to simplify complex SQL
+WITH
+subquery_name
+AS
+(the aggregation SQL statement)
+SELECT
+(query naming subquery_name);
+
 -- get user/sid
 SELECT user || '@' || SYS_CONTEXT('USERENV','DB_NAME') from dual
 

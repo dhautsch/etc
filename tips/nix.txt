@@ -1,0 +1,13 @@
+Bash to forget history
+export HISTSIZE=0
+
+getfacl file1 | setfacl --set-file=- file2
+
+# set putty terminal label in windows
+perl -e 'print "\033]0;'`uname -n `'\007"'
+
+# disable sudo timeout
+export TMOUT=0
+
+alias lf='ls -FCa'
+alias ll='ls -lart'

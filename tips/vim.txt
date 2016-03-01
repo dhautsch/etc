@@ -1,0 +1,85 @@
+~/.vimrc sample
+highlight Comment ctermfg=cyan
+set diffopt+=iwhite
+set diffexpr=DiffW()
+function DiffW()
+        let opt = ""
+        if &diffopt =~ "icase"
+                let opt = opt . "-i "
+        endif
+        if &diffopt =~ "iwhite"
+                let opt = opt . "-w " " vim uses -b by default
+        endif
+        silent execute "!diff -a --binary " . opt .
+                \ v:fname_in . " " . v:fname_new .  " > " . v:fname_out
+endfunction
+
+
+Vim to tabify file. aligns left, does not auto-indent
+gg=G
+
+Vim change dos file to unix format
+:set fileformat=unix
+
+
+Vim to enable/disable syntax highlighting
+:set syntax=ON
+:set syntax=OFF
+
+Vim visual mode
+v -- start cursor mode and cursor about
+V -- start line mode
+Ctrl-V -- start block mode
+d -- delete highlighted section
+c -- change highlighted section
+! -- filter through external program highlighted section
+gu -- downcase highlighted section
+gU -- upcase highlighted section
+y -- yank highlighted section
+
+Vim file browser
+:edit . -- edit directory
+:cd dir -- change directory
+:pwd -- show current directory
+:cd - -- goto last directory
+<enter> -- Open the file or directory in the current window
+o -- Horizontally split window and display file 
+v -- Vertically split window and display file   
+t -- Open file in a new tab
+
+Vim buffers
+:buffers -- list buffers
+:buffer 1 -- goto buffer 1
+
+Vim windows
+vim -o one.txt two.txt three.txt -- open a window for each file
+:qall -- quit all windows
+:qall! -- quit all discarding changes
+:wall -- write all windows
+:wqall -- write and quit all windows
+:split -- split into two windows
+:split two.txt -- open a second window and edit file
+:vsplit -- split vertically into windows
+:vsplit two.txt -- split vertically and edit file
+:new -- split and open empty window
+:vnew -- split vertically and open empty window
+:edit one.txt -- open file in current window
+:close -- close window
+:only -- close all other windows
+Ctrl-W w -- move between windows
+Ctrl-W Ctrl-W -- move between windows
+Ctrl-W + -- expand window
+Ctrl-W - -- decrease window size
+Ctrl-W h -- move to window on left
+Ctrl-W j -- move to window below
+Ctrl-W k -- move to window above
+Ctrl-W l -- move to window on right
+Ctrl-W t -- move to window on top
+Ctrl-W b -- move to window on bottom
+
+Vim tabs
+vim -p one.txt two.txt three.txt -- open a tab for each file
+:tabedit two.txt -- create new tab and edit file
+:tabedit -- new tab and empty window
+:tab split -- create new tab with same file
+gt -- jump between tabs

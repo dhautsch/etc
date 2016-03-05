@@ -1,0 +1,242 @@
+(setq load-path (cons "~/lisp" load-path))
+
+(global-unset-key "\C-z") ;; unbind ctl-z
+(global-unset-key "\C-x\C-z") ;; unbind ctl-x ctl-z
+
+(global-set-key "\C-z" 'advertised-undo)
+(global-set-key [f1] 'set-mark-command)
+(global-set-key [f2] 'match-paren)
+(global-set-key [f3] 'goto-line)
+(global-set-key [f4] 'enlarge-window)
+(global-set-key [f5] 'exchange-point-and-mark)
+(global-set-key [f6] 'call-last-kbd-macro)
+(global-set-key [f7] 'query-replace-regexp)
+(global-set-key [f8] 'next-error)
+(global-set-key [f9] 'insert-register)
+(global-set-key [f10] 'copy-to-register)
+(global-set-key [f11] 'repeat-complex-command)
+
+(put 'upcase-region 'disabled nil)
+(put 'downcase-region 'disabled nil)
+(put 'eval-expression 'disabled nil)
+
+(setq scroll-step 1)
+(setq display-warning-minimum-level 'error)
+(setq display-time-24hr-format t)
+(setq blink-matching-paren t)
+(setq case-fold-search t)
+(setq emerge-diff-options "-b -w")
+
+;;; disable Version Control dired recursion
+(setq vc-dired-recurse nil)
+
+;;; disable Version Control dired terse display
+(setq vc-dired-terse-display nil)
+
+
+(show-paren-mode t)
+(column-number-mode 1)
+(line-number-mode 1)
+(display-time)
+(transient-mark-mode t)
+(menu-bar-mode nil)
+
+
+(defun my-prev-window ()
+ (interactive)
+ (select-window (previous-window)))
+
+(defun my-next-window ()
+ (interactive)
+ (select-window (next-window)))
+
+(defun this-line-to-top ()
+ (interactive)
+ (let ((bol-point (save-excursion (beginning-of-line) (point))))
+   (set-window-start (selected-window) bol-point)))
+
+;; Here is some Emacs Lisp that will make the <%> key show the
+;; matching parenthesis, like in `vi'.  In addition, if the cursor
+;; isn't over a parenthesis, it simply inserts a % like normal.
+(defun match-paren (arg)
+ "Go to the matching paren if on a paren; otherwise insert %."
+ (interactive "p")
+ (cond ((looking-at "\\s\(") (forward-list 1) (backward-char 1))
+    ((looking-at "\\s\)") (forward-char 1) (backward-list 1))
+    (t (self-insert-command (or arg 1)))))
+
+(defun perl-shebang ()
+ "Insert perl shebang"
+ (interactive)
+ (save-excursion
+   (save-restriction
+     (widen)
+     (goto-char (point-min))
+     (insert "#!/usr/bin/perl\n")
+     )
+   )
+ )
+
+(defun plusx ()
+ "chmod +x on current buffer."
+ (interactive)
+ (if buffer-file-name
+     (progn
+    (shell-command (format "chmod +x %s" buffer-file-name)))
+   (error "Not visiting a file."))
+ )
+
+(defun perl-compile ()
+ "Run perl -c on current buffer."
+ (interactive)
+ (if buffer-file-name
+     (progn
+    (shell-command (format "perl -c %s" buffer-file-name)))
+   (error "Not visiting a file."))
+ )
+
+
+
+(autoload 'find-dired "find.elc" "get find-dired when needed" t)
+
+;;; Hexl mode (binary editing)
+(autoload 'hexl-find-file "hexl.elc"
+     "Edit file FILENAME in hexl-mode." t)
+
+
+;;;             (concat dired-omit-files "\\|^\\..+$\\|^\\.don_.*$\\|^CVS$"))
+
+(add-hook 'dired-load-hook
+     (function (lambda ()
+             (load "dired-x")
+             ;; Set dired-x global variables here.  For example:
+             ;; (setq dired-guess-shell-gnutar "gtar")
+             (setq dired-x-hands-off-my-keys nil)
+             (setq dired-omit-files
+               (concat dired-omit-files "\\|^\\.don_.*$\\|^CVS$"))
+             )))
+(add-hook 'dired-mode-hook
+     (function (lambda ()
+             ;; Set dired-x buffer-local variables here.  For example:
+             (setq dired-omit-files-p t)
+             )))
+
+
+
+(message "end of .emacs init file")
+
+;;; another set of settings
+(cond ((fboundp 'global-font-lock-mode)
+       ;; Turn on font-lock in all modes that support it
+       (global-font-lock-mode t)
+       ;; Maximum colors
+       (setq font-lock-maximum-decoration t)))
+
+(transient-mark-mode t)
+(show-paren-mode 1)
+(set-message-beep 'ok)
+
+;; For the interactive shell
+(setq explicit-shell-file-name "d:/cygwin/bin/bash.exe")
+
+;; For subprocesses invoked via the shell (e.g., "shell -c command")
+(setq shell-file-name "d:/cygwin/bin/bash.exe")
+
+(defun my-shell-setup ()
+  "For Cygwin bash under Emacs 20"
+  (setq comint-scroll-show-maximum-output 'this)
+  (setq comint-completion-addsuffix t)
+  ;; (setq comint-process-echoes t) ;; reported that this is no longer needed
+  (setq comint-eol-on-send t)
+  (setq w32-quote-process-args ?\")
+  (make-variable-buffer-local 'comint-completion-addsuffix))
+
+(setq shell-mode-hook 'my-shell-setup)
+
+(setenv "PID" nil)
+
+(setq ls-lisp-use-insert-directory-program t)      ;; use external ls
+(setq insert-directory-program "d:/cygwin/bin/ls") ;; ls program name
+;; Change this to your absolute path --^
+
+(set-frame-height (selected-frame) 48)
+(set-frame-width (selected-frame) 80)
+(set-background-color "black") 
+(set-foreground-color "white") 
+(set-cursor-color "white")
+(set-face-background 'modeline "white") 
+(set-face-foreground 'modeline "black") 
+
+(global-unset-key "\C-z") ;; unbind ctl-z
+(global-unset-key "\C-x\C-z") ;; unbind ctl-x ctl-z
+
+(global-set-key "\C-z" 'advertised-undo)
+(global-set-key [f1] 'set-mark-command)
+(global-set-key [f2] 'advertised-undo)
+(global-set-key [f3] 'goto-line)
+(global-set-key [f4] 'enlarge-window)
+(global-set-key [f5] 'exchange-point-and-mark)
+(global-set-key [f6] 'call-last-kbd-macro)
+(global-set-key [f7] 'query-replace-regexp)
+(global-set-key [f8] 'next-error)
+(global-set-key [f9] 'insert-register)
+(global-set-key [f10] 'copy-to-register)
+(global-set-key [f11] 'repeat-complex-command)
+
+(defun my-prev-window ()
+ (interactive)
+ (select-window (previous-window)))
+
+(defun my-next-window ()
+ (interactive)
+ (select-window (next-window)))
+
+(defun this-line-to-top ()
+ (interactive)
+ (let ((bol-point (save-excursion (beginning-of-line) (point))))
+   (set-window-start (selected-window) bol-point)))
+
+
+
+(setq display-time-24hr-format t)
+(column-number-mode 1)
+(display-time)
+
+(autoload 'find-dired "find.elc" "get find-dired when needed" t)
+
+;;; Hexl mode (binary editing)
+(autoload 'hexl-find-file "hexl.elc"
+     "Edit file FILENAME in hexl-mode." t)
+
+;;; disable Version Control dired recursion
+(setq vc-dired-recurse nil)
+
+;;; disable Version Control dired terse display
+(setq vc-dired-terse-display nil)
+
+;;;             (concat dired-omit-files "\\|^\\..+$\\|^\\.don_.*$\\|^CVS$"))
+
+(add-hook 'dired-load-hook
+     (function (lambda ()
+             (load "dired-x")
+             ;; Set dired-x global variables here.  For example:
+             ;; (setq dired-guess-shell-gnutar "gtar")
+             (setq dired-x-hands-off-my-keys nil)
+             (setq dired-omit-files
+               (concat dired-omit-files "\\|^\\.don_.*$\\|^CVS$"))
+             )))
+(add-hook 'dired-mode-hook
+     (function (lambda ()
+             ;; Set dired-x buffer-local variables here.  For example:
+             (setq dired-omit-files-p t)
+             )))
+
+
+(put 'upcase-region 'disabled nil)
+
+(put 'downcase-region 'disabled nil)
+
+(put 'eval-expression 'disabled nil)
+
+(message "end of .emacs init file")
+

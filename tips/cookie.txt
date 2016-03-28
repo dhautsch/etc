@@ -1,0 +1,18 @@
+#!/usr/bin/ksh
+
+COOKIE_VAL=$(md5sum $0|perl -lane 'print $F[0]')
+
+#
+# Remove the expires to make it a session cookie.
+# The Secure attribute is meant to keep cookie communication limited to encrypted transmission. 
+# The HttpOnly attribute directs browsers not to expose cookies through channels other than HTTP (and HTTPS) requests.
+cat <<EOF
+Set-Cookie: MyCookie=$COOKIE_VAL; expires=Thu, 31 Dec 12:00:00 2037; Secure; HttpOnly
+Content-type: text/html
+
+<HTML>
+<HEAD><TITLE>Cookie Dispenser</TITLE></HEAD>
+<BODY><P>Have a cookie</P>
+</BODY>
+</HTML>
+EOF

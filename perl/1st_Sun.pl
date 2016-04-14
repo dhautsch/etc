@@ -8,16 +8,19 @@ my $TIME = time;
 my $DAY = 86400;
 my @TIME = localtime($TIME);
 my %H;
-my %WDAY = (Sun => 0, Mon => 1, Tue => 2, Wed => 3, Thr => 4, Fri => 5, Sat => 6);
+my @WDAY = qw(Sun Mon Tue Wed Thr Fri Sat);
+my %WDAY = map { ($WDAY[$_], $_) } 0..$#WDAY;
+my @WEEK = qw(1st 2nd 3rd 4th 5th 6th);
+my @FLG = qw(today test last next);
 my $WDAY;
-my $PAT = '((1st|2nd|3rd|4th|5th|6th)_)*(Sun|Mon|Tue|Wed|Thr|Fri|Sat)';
+my $PAT = '((' . join('|', @WEEK) . ')_)*(' . join('|', @WDAY) . ')';
 my $WDAY_CNT;
 my %OPTS;
 my @OUT;
 my $EXIT = 1;
 
-if (GetOptions(\%OPTS, 'help', 'test', 'last', 'next') && @ARGV == 1 && $ARGV[0] =~ m!$PAT!) {
-	my $day_ = $3;
+if (GetOptions(\%OPTS, 'help', @FLG) && (@ARGV == 1 && $ARGV[0] =~ m!$PAT!) || (@ARGV == 0 && $OPTS{today})) {
+	my $day_ = $3 ? $3 : $WDAY[$TIME[6]];
 	my $wk_ = $2 ? $2 : 0;
 	$WDAY_CNT = substr($wk_, 0, 1);
 	$WDAY = $WDAY{$day_};
@@ -25,7 +28,7 @@ if (GetOptions(\%OPTS, 'help', 'test', 'last', 'next') && @ARGV == 1 && $ARGV[0]
 
 	my $flgCnt_ = 0;
 
-	foreach my $flg_ (qw(test last next)) {
+	foreach my $flg_ (@FLG) {
 		if ($OPTS{$flg_}) {
 			$OPTS{$flg_} = sprintf("%04d-%02d-%02d", $TIME[5] + 1900, $TIME[4] + 1, $TIME[3]);
 			$flgCnt_++;
@@ -40,7 +43,8 @@ else {
 
 
 if ($OPTS{help}) {
-	print "Usage: $0 [-test|-last|-next] $PAT\n";
+	print "Usage: $0 [-today|-test|-last|-next] $PAT\n";
+	print "\t-today: print date, gmt noon and day of week\n";
 	print "\t-test : test if today matches $PAT\n";
 	print "\t-last : return last $PAT\n";
 	print "\t-next : return next $PAT\n";
@@ -68,7 +72,18 @@ foreach my $i_ (1..730) {
 	$TIME[4] = sprintf("%02d", $TIME[4] + 1);
 	$TIME[3] = sprintf("%02d", $TIME[3]);
 
-	push @{$H{$TIME[5]}{$TIME[4]}{WDAY}[$TIME[6]]}, {'DATE', sprintf("%04d-%s-%s", $TIME[5], $TIME[4], $TIME[3]), 'NOON', $TIME, 'MDAY', $TIME[3]};
+	my $dt_ = sprintf("%04d-%s-%s", $TIME[5], $TIME[4], $TIME[3]);
+
+	push @{$H{$TIME[5]}{$TIME[4]}{WDAY}[$TIME[6]]}, {'DATE', $dt_, 'NOON', $TIME, 'MDAY', $TIME[3]};
+
+
+	if ($OPTS{today} && $OPTS{today} eq $dt_) {
+		my @a_ = @{$H{$TIME[5]}{$TIME[4]}{WDAY}[$TIME[6]]};
+
+		$WDAY_CNT = $#a_;
+		print "$dt_ $TIME $WEEK[$WDAY_CNT]_$WDAY[$WDAY]\n";
+		exit(0);
+	}
 }
 
 foreach my $year_ (sort keys %H) {

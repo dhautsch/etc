@@ -13,6 +13,11 @@ desc <table_name>
 --- Get tables columns and types
 select column_name, data_type, data_length, nullable from user_tab_columns
 
+--
+-- regex http://www.dba-oracle.com/t_regular_expressions.htm
+--
+select * from services where regexp_like(host_name, '[dt]lp-[[:alnum:]]+-a001.') 
+
 -- WITH clause to simplify complex SQL
 WITH
 subquery_name

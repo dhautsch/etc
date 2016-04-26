@@ -311,7 +311,7 @@ __DATA__
 # Following is example code - don@hautsch.com
 #
 
-DIGEST=$(./get_sp_list_items.pl -usetmp $TMP_DIR \
+DIGEST=$(./get_sp_list_items.pl \
 		-digest http://sharepoint/eso-sites/etlinfraeng/etl | perl -lane 'print $1 if m!d:FormDigestValue.*\047([^\047]+)\047!')
 
 get_sp_list_items.pl \

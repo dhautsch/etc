@@ -1,0 +1,18 @@
+
+
+export JAVA_HOME=/usr/java
+PATH=$JAVA_HOME/bin:$PATH
+
+keytool -genkey -keystore local.keystore -storepass rmi+ssl -keypass rmi+ssl -keyalg RSA \
+        -alias local -validity 3650 \
+        -dname "cn=admin,ou=people,ou=corporate,dc=hautsch,dc=com"
+
+Add following to
+
+  <subsystem xmlns="urn:jboss:domain:web:1.5" default-virtual-server="default-host" native="false">
+    <connector name="https" protocol="HTTP/1.1" scheme="https" socket-binding="https" enable-lookups="false" secure="true">
+    <ssl name="ssl" key-alias="mdm" password="rmi+ssl" certificate-key-file="/usr/conf/local.keystore" protocol="TLSv1" verify-client="false"/>
+  </connector>
+
+  <socket-binding-group name="standard-sockets" default-interface="public" port-offset="${jboss.socket.binding.port-offset:0}">
+    <socket-binding name="https" port="8400"/>

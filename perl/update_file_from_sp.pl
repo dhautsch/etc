@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use Time::Local;
+use Getopt::Long;
 use File::Basename;
 use strict;
 my $SP_CMD = "$ENV{HOME}/etlsupp/bin/get_sp_list_items.pl";
@@ -8,11 +9,22 @@ my $SP_UPDT = 0;
 my $SP_ITEM_CNT = -1;
 my $CMP_UPDT = 0;
 my $EXIT = 1;
+my %OPTS;
 
-unless (scalar(@ARGV == 3)) {
-	print STDERR "Usage: $0 URL LIST_TITLE FILE\n";
+$OPTS{help}++ unless GetOptions(\%OPTS, qw(help xml json));
+
+$OPTS{help}++ unless (scalar(@ARGV == 3));
+
+if ($OPTS{help}) {
+	print STDERR "Usage: $0 [-xml|-json] URL LIST_TITLE FILE\n";
 	print STDERR "\tUpdate file from SharePoint if older than list time stamps\n";
+	print STDERR "\t-xml : output xml.\n";
+	print STDERR "\t-json : output json.\n";
 	exit($EXIT);
+}
+
+foreach my $opt_ (qw(xml json)) {
+	$OPTS{FORMAT} = "-$opt_" if $OPTS{$opt_};
 }
 
 if (-f $ARGV[2]) {
@@ -58,7 +70,7 @@ if ($SP_UPDT > $CMP_UPDT) {
 
 	open(FILE, ">$tmp_") or die "Wopen $tmp_ failed : $!";
 
-	foreach (qx($SP_CMD -query '\$top=$SP_ITEM_CNT' @ARGV[0..1])) {
+	foreach (qx($SP_CMD $OPTS{FORMAT} -query '\$top=$SP_ITEM_CNT' @ARGV[0..1])) {
 		$EXIT = 0 if m!\$VAR1!;
 
 		print FILE;

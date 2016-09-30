@@ -15,6 +15,8 @@ my $TMP_DIR;
 my $GET_LIST_RESPONSE;
 my $NETRC;
 my $CURL_KSH;
+my $CURL_CONNECT_TIMEOUT=10;
+my $CURL_MAX_TIME=120;
 my %OPTS;
 my $EXIT = 1;
 
@@ -161,7 +163,7 @@ if ($PROPS{$SHAREPOINT_CONN_PROP}) {
 	open(KSH, ">$CURL_KSH") or die "Wopen $CURL_KSH : $!";
 	print KSH "#!/usr/bin/ksh\n";
 	print KSH "export HOME=$TMP_DIR\n";
-	print KSH "exec curl -v -n --ntlm \\\n -o $GET_LIST_RESPONSE\\\n";
+	print KSH "exec curl -v --connect-timeout $CURL_CONNECT_TIMEOUT --max-time $CURL_MAX_TIME -n --ntlm \\\n -o $GET_LIST_RESPONSE\\\n";
 	print KSH " -X $OPTS{request} \\\n" if $OPTS{request};
 
 	if ($OPTS{json}) {

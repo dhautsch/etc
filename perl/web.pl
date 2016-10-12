@@ -108,8 +108,7 @@ while(1) {
 
 		logmsg $logMsg_;
 
-#		while ( <> ) { # NO OPERATION, waiting for client to close
-#		}
+#		while ( <> ) { }; # NO OPERATION, waiting for client to close
 	};
 
 	close CLIENT;

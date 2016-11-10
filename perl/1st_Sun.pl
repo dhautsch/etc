@@ -4,7 +4,7 @@ use Getopt::Long;
 use Data::Dumper;
 use strict;
 
-my $TIME = time;
+my $TIME = $ENV{1ST_SUN_TIME} || time;
 my $DAY = 86400;
 my @TIME = localtime($TIME);
 my %H;

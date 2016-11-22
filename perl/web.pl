@@ -307,7 +307,7 @@ while(1) {
 				map { print TMP } qx($TOP/infaps);
 			}
 
-			close $TMP;
+			close TMP;
 
 			#
 			# Linux seems to not be syncing to disk properly but the following

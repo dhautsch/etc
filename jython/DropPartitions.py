@@ -12,7 +12,7 @@ INSTALLEDDIR = os.path.abspath(os.path.dirname(__file__))
 DECRYPT = os.environ['HOME'] + '/etlsupp/bin/decrypt'
 SQLPLUS = os.environ['HOME'] + '/etlsupp/bin/sqlplus'
 CONFIG  = os.environ['HOME'] + '/etlsupp/config.properties'
-PROP = 'com.fanniemae.a22.team_db_conn'
+PROP = 'com.hautsch.team_db_conn'
 CONNECT = ''
 
 os.chdir(INSTALLEDDIR)

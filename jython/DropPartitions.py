@@ -46,7 +46,7 @@ set echo off;
 connect $CONNECT;
 With parts as (select table_name, partition_name, get_high_value_as_date(table_name, partition_name) as DT
 from user_tab_partitions
-where table_name like 'A22_%_PART')
+where table_name like '%_PART')
 select  'alter table ' || table_name || ' drop partition ' || partition_name || ' /* ' || to_char(dt, 'YYYY-MM-DD') || ' */ ;' stmt
 from parts where dt < (sysdate-31*3)
 order by 1;

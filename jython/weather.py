@@ -22,8 +22,8 @@ weather_data_tags_dict = {
     'location' : ''
     }
 
-url = "http://w1.weather.gov/xml/current_obs/index.xml"
-request = urllib.request.urlopen(url)
+url = "http://www.weather.gov/xml/current_obs/{}.xml"
+request = urllib.request.urlopen(url.format('index'))
 content = request.read().decode()
 xml_root = ET.fromstring(content)
 
@@ -37,10 +37,7 @@ if station_ not in station_dict :
     print(station_, "is unknown, exiting!")
     sys.exit(0)
 
-url_general = "http://www.weather.gov/xml/current_obs/{}.xml"
-url = url_general.format(station_)
-
-request = urllib.request.urlopen(url)
+request = urllib.request.urlopen(url.format(station_))
 content = request.read().decode()
 
 xml_root = ET.fromstring(content)

@@ -1,3 +1,14 @@
+os.environ['TZ'] = 'US/Eastern'
+time.tzset()
+
+def toSeconds(s):
+        ret_ = None
+
+        if s:
+                ret_ = int(time.mktime(time.strptime(s, "%Y-%m-%dT%H:%M:%S"))) # iso timestamp
+
+        return ret_
+
 def qx(cmd):
         pipe_ = subprocess.Popen(cmd, stdout=PIPE, shell=True, bufsize=-1, close_fds=True)
         try:

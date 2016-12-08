@@ -10,7 +10,9 @@ def toSeconds(s):
         return ret_
 
 def qx(cmd):
-        pipe_ = subprocess.Popen(cmd, stdout=PIPE, shell=True, bufsize=-1, close_fds=True)
+        import subprocess
+
+        pipe_ = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True, bufsize=-1, close_fds=True)
         try:
                 for l_ in pipe_.stdout:
                         s_ = l_.rstrip()

@@ -13,3 +13,10 @@ alias ps='ps -efH' # display processes as tree
 
 alias lf='ls -FCa'
 alias ll='ls -lart'
+
+#!/bin/bash
+scratch=$(mktemp -d -t tmp.XXXXXXXXXX)
+function finish {
+  rm -rf "$scratch"
+}
+trap finish EXIT

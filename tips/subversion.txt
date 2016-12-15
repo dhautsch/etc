@@ -1,0 +1,2 @@
+# turn on $Header$ keyword expansion in file
+svn propset svn:keywords "Header" setfacl_after_sync_me.pl

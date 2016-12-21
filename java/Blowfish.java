@@ -13,7 +13,7 @@ public class Blowfish {
 	 * part and uid list use -Drawoutput=t
 	 * 
 	 * Note if K > 16 chars then you need to include other jars for handling
-	 * large keys
+	 * large keys. Replace K below with char array of 16 random chars.
 	 * 
 	 * @author don@hautsch.com
 	 *
@@ -23,7 +23,8 @@ public class Blowfish {
 	final static char[] P3 = { 'r', 'a', 'w', 'o', 'u', 't', 'p', 'u', 't' };
 	final static String HEX_STRING = "0123456789ABCDEF";
 
-	final static char[] K = { '{', '3', '3', '4', '6', 'A', '5', '3', '3', '-', '7', '4', '2', '3', '-', '4' };
+	// replace K with char array of 16 random chars
+	final static char[] K = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' };
 
 	public static void main(String[] args) {
 		String s_;

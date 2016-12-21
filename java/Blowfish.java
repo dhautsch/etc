@@ -12,29 +12,23 @@ public class Blowfish {
 	 * user.name system property is in uid, uid0, uid1. To return the "string"
 	 * part and uid list use -Drawoutput=t
 	 * 
+	 * Note if K > 16 chars then you need to include other jars for handling
+	 * large keys
+	 * 
 	 * @author don@hautsch.com
 	 *
 	 */
-	final static String USER_NAME_PROP_ENCRYPTED = "9CB2C03E317C71F114022CA6BAD43AB3"; // "user.name"
-	final static String OPTION_PROP_ENCRYPTED = "9C590C9ED0EAC0D5"; // "encrypt"
-	final static String OPTION_PROP_RAWOUTPUT = "403E996C3AB1E3BA8E0D7B37DF2C2989"; // "rawoutput"
+	final static char[] P1 = { 'u', 's', 'e', 'r', '.', 'n', 'a', 'm', 'e' };
+	final static char[] P2 = { 'e', 'n', 'c', 'r', 'y', 'p', 't' };
+	final static char[] P3 = { 'r', 'a', 'w', 'o', 'u', 't', 'p', 'u', 't' };
 	final static String HEX_STRING = "0123456789ABCDEF";
 
-	final static char[] SHORT_KEY = { '{', '3', '3', '4', '6', 'A', '5', '3',
-			'3', '-', '7', '4', '2', '3', '-', '4' };
+	final static char[] K = { '{', '3', '3', '4', '6', 'A', '5', '3', '3', '-', '7', '4', '2', '3', '-', '4' };
 
 	public static void main(String[] args) {
 		String s_;
-		String minusDencryptedIsSet_;
-		String minusDrawoutputIsSet_;
 
-		s_ = decrypt(OPTION_PROP_ENCRYPTED);
-		minusDencryptedIsSet_ = System.getProperty(s_);
-
-		s_ = decrypt(OPTION_PROP_RAWOUTPUT);
-		minusDrawoutputIsSet_ = System.getProperty(s_);
-
-		if (minusDencryptedIsSet_ != null) {
+		if (System.getProperty(new String(P2)) != null) {
 			Console console_ = System.console();
 
 			if (console_ != null) {
@@ -42,27 +36,24 @@ public class Blowfish {
 
 				if (s_ != null && s_.isEmpty() == false) {
 					System.out.println("String entered : '" + s_ + "'");
-					System.out.println("String encrypted: '" + encrypt(s_)
-							+ "'");
+					System.out.println("String encrypted: '" + encrypt(s_) + "'");
 				}
 			}
-		} else if (args != null && args.length == 1
-				&& args[0].isEmpty() == false) {
+		} else if (args != null && args.length == 1 && args[0].isEmpty() == false) {
 			s_ = decrypt(args[0]);
 
 			if (s_ != null && s_.isEmpty() == false) {
 				String[] ret_ = s_.split("[:,]");
 
-				if (minusDrawoutputIsSet_ != null) {
+				if (System.getProperty(new String(P3)) != null) {
 					System.out.println(s_);
 				} else if (ret_.length == 1) {
 					System.out.println(ret_[0]);
 				} else if (ret_.length > 1) {
-					String userName_ = System
-							.getProperty(decrypt(USER_NAME_PROP_ENCRYPTED));
+					s_ = System.getProperty(new String(P1));
 
 					for (int i_ = 1; i_ < ret_.length; i_++) {
-						if (ret_[i_].equals(userName_)) {
+						if (ret_[i_].equals(s_)) {
 							System.out.println(ret_[0]);
 							break;
 						}
@@ -75,13 +66,11 @@ public class Blowfish {
 
 	public static String decrypt(String s) {
 		try {
-			String key_ = new String(SHORT_KEY);
-			SecretKeySpec keySpec_ = new SecretKeySpec(key_.getBytes(),
-					"Blowfish");
+			String key_ = new String(K);
+			SecretKeySpec keySpec_ = new SecretKeySpec(key_.getBytes(), "Blowfish");
 			Cipher cipher_ = Cipher.getInstance("Blowfish");
 			cipher_.init(Cipher.DECRYPT_MODE, keySpec_);
-			byte[] decrypted = cipher_.doFinal(convertHexadecimal2Binary(s
-					.getBytes()));
+			byte[] decrypted = cipher_.doFinal(convertHexadecimal2Binary(s.getBytes()));
 			return new String(decrypted);
 		} catch (Exception e) {
 			return null;
@@ -90,13 +79,11 @@ public class Blowfish {
 
 	public static String encrypt(String s) {
 		try {
-			String key_ = new String(SHORT_KEY);
-			SecretKeySpec keySpec_ = new SecretKeySpec(key_.getBytes(),
-					"Blowfish");
+			String key_ = new String(K);
+			SecretKeySpec keySpec_ = new SecretKeySpec(key_.getBytes(), "Blowfish");
 			Cipher cipher_ = Cipher.getInstance("Blowfish");
 			cipher_.init(Cipher.ENCRYPT_MODE, keySpec_);
-			return new String(convertBinary2Hexadecimal(cipher_.doFinal(s
-					.getBytes())));
+			return new String(convertBinary2Hexadecimal(cipher_.doFinal(s.getBytes())));
 		} catch (Exception e) {
 			return null;
 		}
@@ -110,8 +97,7 @@ public class Blowfish {
 
 		for (int i_ = 0; i_ < hex.length; i_++) {
 			block_ <<= 4;
-			int pos_ = HEX_STRING
-					.indexOf(Character.toUpperCase((char) hex[i_]));
+			int pos_ = HEX_STRING.indexOf(Character.toUpperCase((char) hex[i_]));
 			if (pos_ > -1)
 				block_ += pos_;
 

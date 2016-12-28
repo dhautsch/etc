@@ -1,4 +1,8 @@
+import java.io.BufferedReader;
 import java.io.Console;
+import java.io.File;
+import java.io.InputStreamReader;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -13,18 +17,44 @@ public class Blowfish {
 	 * part and uid list use -Drawoutput=t
 	 * 
 	 * Note if K > 16 chars then you need to include other jars for handling
-	 * large keys. Replace K below with char array of 16 random chars.
+	 * large keys
 	 * 
 	 * @author don@hautsch.com
 	 *
 	 */
-	final static char[] P1 = { 'u', 's', 'e', 'r', '.', 'n', 'a', 'm', 'e' };
 	final static char[] P2 = { 'e', 'n', 'c', 'r', 'y', 'p', 't' };
 	final static char[] P3 = { 'r', 'a', 'w', 'o', 'u', 't', 'p', 'u', 't' };
+	final static char[] P4 = { '/', 'u', 's', 'r', '/', 'b', 'i', 'n', '/', 'w', 'h', 'o', 'a', 'm', 'i' };
+	final static char[] P5 = { 'C', ':', '\\', 'W', 'i', 'n', 'd', 'o', 'w', 's', '\\', 'S', 'y', 's', 't', 'e', 'm', '3', '2', '\\', 'w', 'h', 'o', 'a', 'm', 'i' };
 	final static String HEX_STRING = "0123456789ABCDEF";
 
-	// replace K with char array of 16 random chars
-	final static char[] K = { 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p' };
+	final static char[] K = { '{', '3', '3', '4', '6', 'A', '5', '3', '3', '-', '7', '4', '2', '3', '-', '4' };
+
+	public static String whoAmI() {
+		String ret_ = HEX_STRING;
+
+		try {
+			String s_ = new String(P4);
+			File f = new File(s_);
+			Process proc_ = Runtime.getRuntime().exec(f.exists() ? s_ : new String(P5));
+			BufferedReader input = new BufferedReader(new InputStreamReader(proc_.getInputStream()));
+			while ((s_ = input.readLine()) != null) {
+				s_ = s_.trim();
+				if (s_.isEmpty() == false) {
+					int i_ = s_.indexOf('\\');
+
+					if (i_ < 0)
+						ret_ = s_;
+					else if (i_ < s_.length() - 1)
+						ret_ = s_.substring(i_+1);
+				}
+			}
+			input.close();
+		} catch (Exception err) {
+			err.printStackTrace();
+		}
+		return ret_;
+	}
 
 	public static void main(String[] args) {
 		String s_;
@@ -51,7 +81,7 @@ public class Blowfish {
 				} else if (ret_.length == 1) {
 					System.out.println(ret_[0]);
 				} else if (ret_.length > 1) {
-					s_ = System.getProperty(new String(P1));
+					s_ = whoAmI();
 
 					for (int i_ = 1; i_ < ret_.length; i_++) {
 						if (ret_[i_].equals(s_)) {

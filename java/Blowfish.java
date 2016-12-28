@@ -28,7 +28,7 @@ public class Blowfish {
 	final static char[] P5 = { 'C', ':', '\\', 'W', 'i', 'n', 'd', 'o', 'w', 's', '\\', 'S', 'y', 's', 't', 'e', 'm', '3', '2', '\\', 'w', 'h', 'o', 'a', 'm', 'i' };
 	final static String HEX_STRING = "0123456789ABCDEF";
 
-	final static char[] K = { '{', '3', '3', '4', '6', 'A', '5', '3', '3', '-', '7', '4', '2', '3', '-', '4' };
+	final static char[] K = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 	public static String whoAmI() {
 		String ret_ = HEX_STRING;

@@ -20,3 +20,4 @@ function finish {
   rm -rf "$scratch"
 }
 trap finish EXIT
+trap "rm -rf $HACK" EXIT SIGHUP SIGINT SIGQUIT

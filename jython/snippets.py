@@ -32,3 +32,15 @@ LOG
 """.split("\n") if s_]
 
 LEVELS = [s_ for s_ in BANNER if s_ != 'DATE' and s_ != 'LOG']
+
+
+import logging
+import subprocess
+import os
+
+logging.basicConfig(filename='python.log', level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.warning('this is just an eample.')
+
+s = subprocess.call(["ls", "-ltr"])
+s=os.system('echo $PWD')
+print("s : %s" % (s))

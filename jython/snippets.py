@@ -67,3 +67,22 @@ print "Serving on port 8000..."
 
 # Serve until process is killed
 httpd.serve_forever()
+
+
+
+import urllib2
+import json
+
+#----------------#
+# Define the URL #
+#----------------#
+
+url = "http://host:8000/cgi-bin/xx.pl"
+
+opener = urllib2.build_opener()
+opener.addheaders.append(('Content-type', 'application/json;charset=utf-8'))
+f = opener.open(url)
+v = f.read()
+q = json.loads(v)
+print v
+print q

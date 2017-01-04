@@ -99,3 +99,30 @@ SQL> select dbms_xmlgen.getxml('select * from C_REPOS_DATABASE') xml from dual;
 SET PAGESIZE 20000;
 SET MARKUP HTML ON SPOOL ON PREFORMAT OFF ENTMAP ON;
 select * from user_tables
+
+
+select * from v$version where banner like 'Oracle%'
+
+select '   With the '||parameter||' option'
+from   sys.v_$option
+where  value = 'TRUE';
+
+select '   The '||parameter||' option is not installed'
+from   sys.v_$option
+where  value <> 'TRUE';
+
+SELECT global_name, user_role_privs.* FROM global_name, user_role_privs
+
+select
+   'Hostname : ' || host_name
+   ,'Instance Name : ' || instance_name
+   ,'Started At : ' || to_char(startup_time,'DD-MON-YYYY HH24:MI:SS') stime
+   ,'Uptime : ' || floor(sysdate - startup_time) || ' days(s) ' ||
+   trunc( 24*((sysdate-startup_time) -
+   trunc(sysdate-startup_time))) || ' hour(s) ' ||
+   mod(trunc(1440*((sysdate-startup_time) -
+   trunc(sysdate-startup_time))), 60) ||' minute(s) ' ||
+   mod(trunc(86400*((sysdate-startup_time) -
+   trunc(sysdate-startup_time))), 60) ||' seconds' uptime
+from
+   sys.v_$instance;

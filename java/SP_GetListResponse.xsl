@@ -17,6 +17,11 @@ this is the default ns for MS SharePoint GetListReponse.
 To make XSL work we have to add the :xxx and then
 add the xxx: in front of: feed, entry, content below
 
+Use this file with XmlTransform.java
+
+Replace d:Title and d:PRODUCT_NAME with the columns you are interested in extracting.
+Replace <xsl:text>&amp;</xsl:text> with the delimiter that you want.
+
  -->
 
 <xsl:output method="text" encoding="iso-8859-1"/>

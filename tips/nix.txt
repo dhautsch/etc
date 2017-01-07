@@ -21,3 +21,13 @@ function finish {
 }
 trap finish EXIT
 trap "rm -rf $HACK" EXIT SIGHUP SIGINT SIGQUIT
+
+#
+# Print all the lines between 10 and 20 of a file
+#
+sed -n '10,20p' <filename>
+
+#
+# To print a specific line from a file
+#
+sed -n 5p <file>

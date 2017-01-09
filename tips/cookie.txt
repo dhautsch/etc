@@ -1,4 +1,7 @@
 #!/usr/bin/ksh
+#
+# wget --spider --load-cookies=cookie.txt --save-cookies=cookie.txt 'http://host/cgi-bin/x?x=1&y=2&z=3'
+#
 
 COOKIE_VAL=$(md5sum $0|perl -lane 'print $F[0]')
 

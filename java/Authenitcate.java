@@ -1,6 +1,5 @@
 import java.util.Hashtable;
 import javax.naming.Context;
-import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 
@@ -30,7 +29,7 @@ public class Authenitcate {
 			System.out.println(e);
 		}
 		finally {
-			if (ctx_ != null) try { ctx_.close(); } catch (NamingException e) {}
+			if (ctx_ != null) try { ctx_.close(); } catch (Exception e) {}
 		}
 		System.exit(1);
 	}

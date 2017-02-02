@@ -62,7 +62,7 @@ foreach my $k_ (sort keys %ENV) {
 	foreach my $i_ (0..$#SWIZZLE_REGEX) {
 		$ENV{$k_} =~ s!$SWIZZLE_REGEX[$i_]!$SWIZZLE_REPL[$i_]!g;
 	}
-	print "<tr><td>$k_</td><td>$ENV{$k_}</td></tr>\n";
+	print "<TR><TD>$k_</TD><TD>$ENV{$k_}</TD></TR>\n";
 #	print "$k_='$ENV{$k_}'\n";
 }
 

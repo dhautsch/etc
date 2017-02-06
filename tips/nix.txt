@@ -36,3 +36,19 @@ sed -n 5p <file>
 # call webserver with cookies
 #
 wget --spider --load-cookies=cookie.txt --save-cookies=cookie.txt 'http://host/cgi-bin/x?x=1&y=2&z=3'
+
+
+#
+# AES encryption on Sun Solaris
+#
+# Following are steps to:
+# 1) create 128 AES key file
+# 2) encrypt clear.txt to crypt.txt
+# 3) decrypt crypt.txt
+#
+# Note the key file is read only and it does not appear to work with setfacl to make it readable by others
+#
+KEY_FILE=/export/appl/website/https-dstate-etl08EME/run/cgi-bin/key.aes
+pktool genkey keystore=file outkey=$(basename $KEY_FILE) keytype=aes keylen=128 dir=$(dirname $KEY_FILE)
+encrypt -a aes -k $KEY_FILE -i clear.txt -o crypt.txt
+decrypt -a aes -k $KEY_FILE -i crypt.txt

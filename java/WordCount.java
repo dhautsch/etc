@@ -1,5 +1,9 @@
 package com.yoyodyne;
 
+// TOP=$(cd $(dirname $0) && pwd)
+// HADOOP_TOP=/user/dhautsch
+// #hadoop fs -rm -r -f -skipTrash $HADOOP_TOP/.Trash
+//
 // #
 // # Compile if java file newer than jar
 // #

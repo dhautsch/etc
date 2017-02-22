@@ -2,6 +2,7 @@ import java.sql.*;
 
 //
 // Following env vars and select is for netezza
+// https://www.tutorialspoint.com/jdbc/index.htm
 //
 // export JDBC_URL=jdbc:netezza://host:5480/TEST_DB
 // export JDBC_DRIVER=org.netezza.Driver

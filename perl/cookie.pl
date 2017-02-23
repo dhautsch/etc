@@ -1,15 +1,17 @@
 #!/usr/bin/perl
 
+use POSIX qw(strftime);
 use strict;
 #
-# Set cookie to expire in a week at noon gmt
+# Set cookie to expire 10 days from now
 #
-my $COOKIE_VAL=qx(md5sum $0); $COOKIE_VAL =~ s!\s+.*!!;
+my $COOKIE_VAL=qx(md5sum $0); chomp $COOKIE_VAL; $COOKIE_VAL =~ s!\s+.*!!;
 my @SWIZZLE_REGEX = map { qr($_) } qw(& > < ' ");
 my @SWIZZLE_REPL = qw(&amp; &gt; &lt; &apos; &quot;);
+my $COOKIE_EXPIRES = strftime "%A, %d-%b-%Y %H:%M:%S GMT", gmtime(time + 10*86400);
 
 print<<EOF
-Set-Cookie: MyCookie=$COOKIE_VAL; expires=Thu Dec 31 12:00:00 2037
+Set-Cookie: MyCookie=$COOKIE_VAL;expires=$COOKIE_EXPIRES
 Content-type: text/html
 
 <!DOCTYPE html
@@ -68,6 +70,21 @@ foreach my $k_ (sort keys %ENV) {
 
 print <<EOF
 </TABLE>
+EOF
+;
+
+if ($ENV{REQUEST_METHOD} eq 'POST') {
+	my $buffer_;
+
+	print "<h3>POST FOLLOWS</h3>\n";
+	print "<pre>\n";
+
+	read(STDIN, $buffer_, $ENV{'CONTENT_LENGTH'});
+	print $buffer_;
+
+	print "\n</pre>\n";
+}
+print <<EOF
 </BODY>
 </HTML>
 EOF

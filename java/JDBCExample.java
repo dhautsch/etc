@@ -29,30 +29,52 @@ class JDBCExample {
 
 		try {
 			boolean printUsage_ = false;
-			boolean getMeta_ = args.length > 0 && args[0].equals("--meta") ? true : false;
-			Path p_ = args.length > 1 ? Paths.get(args[1]) : null;
-			
-			printUsage_ = args.length < 2
-					|| (args[0].equals("--dump") == false && getMeta_ == false)
-					|| p_ == null
-					|| Files.isReadable(p_) == false;
+			String nullStr_ = null;
+			boolean getMeta_ = false;
+			boolean doDump_ = false;
+			Path p_ = args.length > 1 ? Paths.get(args[args.length - 1]) : null;
 
-			if (printUsage_ == false && args.length > 2) {
-				try {
-					char c_ = (char) Integer.parseInt(args[2]);
+			int argCnt_ = args.length;
+			
+			for (String s_ : args) {
+				if (s_.equals("--action=meta")) {
+					getMeta_ = true;
+					argCnt_--;
+				}
+				else if (s_.equals("--action=dump")) {
+					doDump_ = true;
+					argCnt_--;
+				}
+				else if (s_.startsWith("--null-str=")) {
+					nullStr_ = s_.replaceFirst("--null-str=", ""); 
+					argCnt_--;
+				}
+				else if (s_.startsWith("--col-delim=")) {
+					try {
+					char c_ = (char) Integer.parseInt(s_.replaceFirst("--col-delim=", "")); 
 					colDelim_ = String.valueOf(c_);
-				} catch (NumberFormatException e_) {
-					printUsage_ = true;
+					argCnt_--;
+					} catch (NumberFormatException e_) {
+						printUsage_ = true;
+					}
 				}
 			}
-
+			
+			if (argCnt_ != 1
+					|| getMeta_ == false && doDump_ == false
+					|| getMeta_ == true && doDump_ == true
+					|| p_ == null
+					|| Files.isReadable(p_) == false)
+				printUsage_ = true;
+			
 			if (printUsage_) {
 				System.out.println("Usage : " + JDBCExample.class.getName()
-						+ "(--dump|--meta) pathToSqlFile [colDelim lineDelim]");
+						+ "--action=(dump|meta) [--col-delim=colDelim --null-str=STR] pathToSqlFile");
 				System.out.println("\t--dump : data to stdout.");
 				System.out.println("\t--meta : metadata to stdout.");
-				System.out.println("pathToSqlFile : path to file containing sql.");
-				System.out.println("colDelim : optional character for column delimiter in decimal. Defaults to |.");
+				System.out.println("\tpathToSqlFile : path to file containing sql.");
+				System.out.println("\t--col-delim : optional character for column delimiter in decimal. Defaults to |.");
+				System.out.println("\t--null-str : optional string to output for nulls.");
 				System.out.println();
 				System.out.println("export JDBC_DRIVER=org.netezza.Driver");
 				System.out.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");
@@ -116,7 +138,11 @@ class JDBCExample {
 
 			while (rs_.next()) {
 				for (int i_ = 1; i_ <= md_.getColumnCount(); i_++) {
-					System.out.print(rs_.getString(i_));
+					if (nullStr_ != null && rs_.getObject(i_) == null)
+						System.out.print(nullStr_);
+					else
+						System.out.print(rs_.getString(i_));
+
 					if (i_ < md_.getColumnCount())
 						System.out.print(colDelim_);
 				}

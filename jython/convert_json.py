@@ -41,6 +41,6 @@ JSON = """
 
 #pdb.set_trace()
 
-OBJ = json.JSONDecoder().decode(JSON)
+OBJ = json.loads(JSON)
 for aref_ in OBJ['columns'] :
 	print(aref_['name'])

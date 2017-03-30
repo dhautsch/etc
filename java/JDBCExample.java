@@ -77,8 +77,9 @@ class JDBCExample {
 			
 			if (printUsage_ == false
 					&& (argCnt_ != 0
-						|| getMeta_ == false && doDump_ == false
-						|| getMeta_ == true && doDump_ == true)
+						|| getMeta_ == true && gzip_ == true
+						|| getMeta_ == true && doDump_ == true
+						|| getMeta_ == false && doDump_ == false)
 					)
 				printUsage_ = true;
 			
@@ -90,7 +91,7 @@ class JDBCExample {
 				System.out.println("\tpathToSqlFile : OPTIONAL. Path to file containing sql, default to stdin.");
 				System.out.println("\t--col-delim : OPTIONAL. Character for column delimiter in decimal. Defaults to |.");
 				System.out.println("\t--null-str : OPTIONAL. String to output for nulls.");
-				System.out.println("\t--gzip : OPTIONAL. String to output for nulls.");
+				System.out.println("\t--gzip : OPTIONAL. Gzip dump output.");
 				System.out.println();
 				System.out.println("export JDBC_DRIVER=org.netezza.Driver");
 				System.out.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");

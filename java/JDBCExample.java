@@ -1,4 +1,10 @@
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -31,30 +37,45 @@ class JDBCExample {
 			String sql_ = null;
 			GZIPOutputStream gzipOut_ = null;
 			boolean printUsage_ = false;
+			InputStream in_ = System.in;
 			String nullStr_ = null;
-			boolean getMeta_ = false;
+			String flagfile_ = null;
 			boolean gzip_ = false;
-			boolean doDump_ = false;
-			Path p_ = null;
 
 			int argCnt_ = args.length;
 			
 			for (String s_ : args) {
-				if (s_.equals("--action=meta")) {
-					getMeta_ = true;
-					argCnt_--;
-				}
-				else if (s_.equals("--action=dump")) {
-					doDump_ = true;
-					argCnt_--;
-				}
-				else if (s_.equals("--gzip")) {
+				if (s_.equals("--gzip")) {
 					gzip_ = true;
 					argCnt_--;
 				}
 				else if (s_.startsWith("--null-str=")) {
 					nullStr_ = s_.replaceFirst("--null-str=", ""); 
 					argCnt_--;
+				}
+				else if (s_.startsWith("--flagfile=")) {
+					String[] l_ = s_.split("=");
+
+					argCnt_--;
+
+					if (l_.length == 2) {
+						flagfile_ = l_[1];
+					} else {
+						printUsage_ = true;
+					}
+				}
+				if (s_.startsWith("--sqlfile=")) {
+					String[] l_ = s_.split("=");
+
+					argCnt_--;
+
+					if (l_.length == 2 && (l_[1].equals("stdin") || l_[1].equals("-"))) {
+						in_ = System.in;
+					} else if (l_.length == 2) {
+						in_ = new FileInputStream(l_[1]);
+					} else {
+						printUsage_ = true;
+					}
 				}
 				else if (s_.startsWith("--col-delim=")) {
 					try {
@@ -67,31 +88,17 @@ class JDBCExample {
 				}
 			}
 
-			if (printUsage_ == false && argCnt_ == 1) {
-				p_ = Paths.get(args[args.length-1]);
-				argCnt_--;
-				
-				if (Files.isReadable(p_) == false)
-					printUsage_ = true;
-			}
-			
-			if (printUsage_ == false
-					&& (argCnt_ != 0
-						|| getMeta_ == true && gzip_ == true
-						|| getMeta_ == true && doDump_ == true
-						|| getMeta_ == false && doDump_ == false)
-					)
+			if (argCnt_ != 0)
 				printUsage_ = true;
 			
 			if (printUsage_) {
 				System.out.println("Usage : " + JDBCExample.class.getName()
-						+ "--action=(dump|meta) [--col-delim=colDelim --null-str=STR pathToSqlFile]");
-				System.out.println("\t--action=dump : data to stdout.");
-				System.out.println("\t--action=meta : metadata to stdout.");
-				System.out.println("\tpathToSqlFile : OPTIONAL. Path to file containing sql, default to stdin.");
+						+ "[--sqlfile=(path|stdin|-) --flagfile=path --col-delim=colDelim --null-str=STR --gzip]");
+				System.out.println("\t--sqlfile=(path|stdin|-) : OPTIONAL. Path to file containing sql, default to stdin.");
+				System.err.println("\t--flagfile=path : OPTIONAL. Write meta data and extracted count to file.");
 				System.out.println("\t--col-delim : OPTIONAL. Character for column delimiter in decimal. Defaults to |.");
 				System.out.println("\t--null-str : OPTIONAL. String to output for nulls.");
-				System.out.println("\t--gzip : OPTIONAL. Gzip dump output.");
+				System.out.println("\t--gzip : OPTIONAL. Gzip output.");
 				System.out.println();
 				System.out.println("export JDBC_DRIVER=org.netezza.Driver");
 				System.out.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");
@@ -112,59 +119,25 @@ class JDBCExample {
 				System.out.println("Error  : " + warn.getErrorCode());
 			}
 
-			if (p_ != null)
-				sql_ = new String(Files.readAllBytes(p_));
-			else {
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				byte[] buffer = new byte[8*1024];
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[8 * 1024];
 
-				int bytesRead;
-				while ((bytesRead = System.in.read(buffer)) > 0) {
-				    baos.write(buffer, 0, bytesRead);
-				}
-				sql_ = baos.toString();
+			int bytesRead;
+			while ((bytesRead = in_.read(buffer)) > 0) {
+				baos.write(buffer, 0, bytesRead);
 			}
+			sql_ = baos.toString();
 
 			stmt_ = conn_.createStatement();
 
 			sql_ = sql_.replace(";", "");
 
-			if (getMeta_)
-				sql_ = "SELECT t.* FROM (" + sql_ + ") t WHERE 1 = 2";
-
+			long extractCnt_ = 0;
 			ResultSet rs_ = stmt_.executeQuery(sql_);
 			ResultSetMetaData md_ = rs_.getMetaData();
 
-			if (getMeta_) {
-				System.out.println("{");
-				System.out.println("\t\042columns\042 : [");
-
-				for (int i = 1; i <= md_.getColumnCount(); i++) {
-					String name_ = md_.getColumnLabel(i);
-					String typeName_ = md_.getColumnTypeName(i);
-					int nullable_ = md_.isNullable(i);
-					int precision_ = md_.getPrecision(i);
-					int scale_ = md_.getScale(i);
-
-					System.out.print("\t\t");
-
-					if (i > 1)
-						System.out.print(",");
-
-					System.out.println("{");
-					System.out.println("\t\t\t\042name\042 : \042" + name_ + "\042,");
-					System.out.println("\t\t\t\042type\042 : \042" + typeName_ + "\042,");
-					System.out.println("\t\t\t\042precision\042 : \042" + precision_ + "\042,");
-					System.out.println("\t\t\t\042scale\042 : \042" + scale_ + "\042,");
-					System.out.println("\t\t\t\042nullable\042 : \042"
-							+ (nullable_ == DatabaseMetaData.columnNullable ? 1 : 0) + "\042");
-					System.out.println("\t\t}");
-				}
-				System.out.println("\t]");
-				System.out.println("}");
-			}
-
 			String nl_ = System.getProperty("line.separator");
+
 
 			if (gzip_)
 				gzipOut_ = new GZIPOutputStream(System.out);
@@ -191,10 +164,51 @@ class JDBCExample {
 				}
 				else
 					System.out.print(s_);
+
+				extractCnt_++;
 			}
 
 			if (gzip_)
 				gzipOut_.close();
+
+			if (flagfile_ != null) {
+				int random_ = (int )(Math.random() * 50 + 1);
+				String tmp_ = flagfile_ + random_;
+				PrintStream out_ = new PrintStream(tmp_);
+
+				out_.println("{");
+				out_.println("\t\042extract_cnt\042 : \042" + extractCnt_ + "\042");
+				out_.println("\t,\042columns\042 : [");
+
+				for (int i = 1; i <= md_.getColumnCount(); i++) {
+					String name_ = md_.getColumnLabel(i);
+					String typeName_ = md_.getColumnTypeName(i);
+					int nullable_ = md_.isNullable(i);
+					int precision_ = md_.getPrecision(i);
+					int scale_ = md_.getScale(i);
+
+					out_.print("\t\t");
+
+					if (i > 1)
+						out_.print(",");
+
+					out_.println("{");
+					out_.println("\t\t\t\042name\042 : \042" + name_ + "\042,");
+					out_.println("\t\t\t\042type\042 : \042" + typeName_ + "\042,");
+					out_.println("\t\t\t\042precision\042 : \042" + precision_ + "\042,");
+					out_.println("\t\t\t\042scale\042 : \042" + scale_ + "\042,");
+					out_.println("\t\t\t\042nullable\042 : \042"
+							+ (nullable_ == DatabaseMetaData.columnNullable ? 1 : 0) + "\042");
+					out_.println("\t\t}");
+				}
+				out_.println("\t]");
+				out_.println("}");
+				out_.close();
+
+				File tmpFile_ = new File(tmp_);
+
+				tmpFile_.renameTo(new File(flagfile_));
+			}
 			
 			// Close the result set, statement and the connection
 			rs_.close();

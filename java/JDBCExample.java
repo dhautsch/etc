@@ -1,21 +1,21 @@
-import java.sql.*;
-
-//
-// export JDBC_URL=jdbc:netezza://host:5480/TEST_DB?user=scott&password=tiger
-// export JDBC_DRIVER=org.netezza.Driver
-// export JDBC_URL=jdbc:oracle:thin:scott/tiger@//host:1521/SID
-// export JDBC_DRIVER=oracle.jdbc.OracleDriver
-// export JAVA_HOME=<PARENT_DIRS>/java
-// PATH=$JAVA_HOME/bin:$PATH
-// export CLASSPATH=<PARENT_DIRS>/nzjdbc3.jar:<PARENT_DIRS>/ojdbc6.jar:.
-// javac JDBCExample.java
-// java  JDBCExample
-//
-
+import java.io.ByteArrayOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
+import java.util.zip.GZIPOutputStream;
+
+//
+//export JDBC_URL=jdbc:netezza://host:5480/TEST_DB?user=scott&password=tiger
+//export JDBC_DRIVER=org.netezza.Driver
+//export JDBC_URL=jdbc:oracle:thin:scott/tiger@//host:1521/SID
+//export JDBC_DRIVER=oracle.jdbc.OracleDriver
+//export JAVA_HOME=<PARENT_DIRS>/java
+//PATH=$JAVA_HOME/bin:$PATH
+//export CLASSPATH=<PARENT_DIRS>/nzjdbc3.jar:<PARENT_DIRS>/ojdbc6.jar:.
+//javac JDBCExample.java
+//java  JDBCExample
+//
 
 class JDBCExample {
 	private static boolean isDateTimeColumn(int columnType) {
@@ -25,14 +25,17 @@ class JDBCExample {
 	public static void main(String args[]) {
 		Connection conn_ = null;
 		Statement stmt_ = null;
-		String colDelim_ = "|";
 
 		try {
+			String colDelim_ = "|";
+			String sql_ = null;
+			GZIPOutputStream gzipOut_ = null;
 			boolean printUsage_ = false;
 			String nullStr_ = null;
 			boolean getMeta_ = false;
+			boolean gzip_ = false;
 			boolean doDump_ = false;
-			Path p_ = args.length > 1 ? Paths.get(args[args.length - 1]) : null;
+			Path p_ = null;
 
 			int argCnt_ = args.length;
 			
@@ -43,6 +46,10 @@ class JDBCExample {
 				}
 				else if (s_.equals("--action=dump")) {
 					doDump_ = true;
+					argCnt_--;
+				}
+				else if (s_.equals("--gzip")) {
+					gzip_ = true;
 					argCnt_--;
 				}
 				else if (s_.startsWith("--null-str=")) {
@@ -59,22 +66,31 @@ class JDBCExample {
 					}
 				}
 			}
+
+			if (printUsage_ == false && argCnt_ == 1) {
+				p_ = Paths.get(args[args.length-1]);
+				argCnt_--;
+				
+				if (Files.isReadable(p_) == false)
+					printUsage_ = true;
+			}
 			
-			if (argCnt_ != 1
-					|| getMeta_ == false && doDump_ == false
-					|| getMeta_ == true && doDump_ == true
-					|| p_ == null
-					|| Files.isReadable(p_) == false)
+			if (printUsage_ == false
+					&& (argCnt_ != 0
+						|| getMeta_ == false && doDump_ == false
+						|| getMeta_ == true && doDump_ == true)
+					)
 				printUsage_ = true;
 			
 			if (printUsage_) {
 				System.out.println("Usage : " + JDBCExample.class.getName()
-						+ "--action=(dump|meta) [--col-delim=colDelim --null-str=STR] pathToSqlFile");
-				System.out.println("\t--dump : data to stdout.");
-				System.out.println("\t--meta : metadata to stdout.");
-				System.out.println("\tpathToSqlFile : path to file containing sql.");
-				System.out.println("\t--col-delim : optional character for column delimiter in decimal. Defaults to |.");
-				System.out.println("\t--null-str : optional string to output for nulls.");
+						+ "--action=(dump|meta) [--col-delim=colDelim --null-str=STR pathToSqlFile]");
+				System.out.println("\t--action=dump : data to stdout.");
+				System.out.println("\t--action=meta : metadata to stdout.");
+				System.out.println("\tpathToSqlFile : OPTIONAL. Path to file containing sql, default to stdin.");
+				System.out.println("\t--col-delim : OPTIONAL. Character for column delimiter in decimal. Defaults to |.");
+				System.out.println("\t--null-str : OPTIONAL. String to output for nulls.");
+				System.out.println("\t--gzip : OPTIONAL. String to output for nulls.");
 				System.out.println();
 				System.out.println("export JDBC_DRIVER=org.netezza.Driver");
 				System.out.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");
@@ -95,14 +111,25 @@ class JDBCExample {
 				System.out.println("Error  : " + warn.getErrorCode());
 			}
 
-			String sql_ = new String(Files.readAllBytes(p_));
+			if (p_ != null)
+				sql_ = new String(Files.readAllBytes(p_));
+			else {
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				byte[] buffer = new byte[8*1024];
+
+				int bytesRead;
+				while ((bytesRead = System.in.read(buffer)) > 0) {
+				    baos.write(buffer, 0, bytesRead);
+				}
+				sql_ = baos.toString();
+			}
 
 			stmt_ = conn_.createStatement();
 
-			sql_ = "SELECT t.* FROM (" + sql_.replace(";", "") + ") t";
+			sql_ = sql_.replace(";", "");
 
 			if (getMeta_)
-				sql_ = sql_ + " WHERE 1 = 2";
+				sql_ = "SELECT t.* FROM (" + sql_ + ") t WHERE 1 = 2";
 
 			ResultSet rs_ = stmt_.executeQuery(sql_);
 			ResultSetMetaData md_ = rs_.getMetaData();
@@ -136,19 +163,38 @@ class JDBCExample {
 				System.out.println("}");
 			}
 
+			String nl_ = System.getProperty("line.separator");
+
+			if (gzip_)
+				gzipOut_ = new GZIPOutputStream(System.out);
+
 			while (rs_.next()) {
+				StringBuilder sb_ = new StringBuilder();
+				
 				for (int i_ = 1; i_ <= md_.getColumnCount(); i_++) {
 					if (nullStr_ != null && rs_.getObject(i_) == null)
-						System.out.print(nullStr_);
+						sb_.append(nullStr_);
 					else
-						System.out.print(rs_.getString(i_));
+						sb_.append(rs_.getString(i_));
 
 					if (i_ < md_.getColumnCount())
-						System.out.print(colDelim_);
+						sb_.append(colDelim_);
 				}
-				System.out.println();
+				sb_.append(nl_);
+
+				String s_ = sb_.toString();
+
+				if (gzip_) {
+					byte b_[] = s_.getBytes();
+					gzipOut_.write(b_, 0, b_.length);
+				}
+				else
+					System.out.print(s_);
 			}
 
+			if (gzip_)
+				gzipOut_.close();
+			
 			// Close the result set, statement and the connection
 			rs_.close();
 			stmt_.close();

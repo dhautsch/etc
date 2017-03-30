@@ -1,13 +1,8 @@
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.*;
 import java.util.zip.GZIPOutputStream;
 
@@ -41,7 +36,8 @@ class JDBCExample {
 			String nullStr_ = null;
 			String flagfile_ = null;
 			boolean gzip_ = false;
-
+			long startTime_ = System.currentTimeMillis() / 1000l;
+			long endTime_ = startTime_;
 			int argCnt_ = args.length;
 			
 			for (String s_ : args) {
@@ -176,8 +172,12 @@ class JDBCExample {
 				String tmp_ = flagfile_ + random_;
 				PrintStream out_ = new PrintStream(tmp_);
 
+				endTime_ = System.currentTimeMillis() / 1000l;
+
 				out_.println("{");
 				out_.println("\t\042extract_cnt\042 : \042" + extractCnt_ + "\042");
+				out_.println("\t,\042start_secs\042 : \042" + startTime_ + "\042");
+				out_.println("\t,\042end_secs\042 : \042" + endTime_ + "\042");
 				out_.println("\t,\042columns\042 : [");
 
 				for (int i = 1; i <= md_.getColumnCount(); i++) {

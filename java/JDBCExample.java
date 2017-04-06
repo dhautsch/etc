@@ -4,7 +4,10 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.zip.GZIPOutputStream;
+import java.util.Date;
+import java.util.TimeZone;
 
 //
 //export JDBC_URL=jdbc:netezza://host:5480/TEST_DB?user=scott&password=tiger
@@ -23,6 +26,10 @@ class JDBCExample {
 		return (columnType == Types.TIMESTAMP) || (columnType == Types.DATE) || (columnType == Types.TIME);
 	}
 
+	public static String qquote(String s) {
+		return "\042" + (s == null ? "" : s) + "\042";
+	}
+
 	public static void main(String args[]) {
 		Connection conn_ = null;
 		Statement stmt_ = null;
@@ -36,10 +43,11 @@ class JDBCExample {
 			String nullStr_ = null;
 			String flagfile_ = null;
 			boolean gzip_ = false;
-			long startTime_ = System.currentTimeMillis() / 1000l;
-			long endTime_ = startTime_;
+			Date startTS_ = new Date();
+//			long startTime_ = startTS_.getTime() / 1000l;
+//			long endTime_ = startTime_;
 			int argCnt_ = args.length;
-			
+
 			for (String s_ : args) {
 				if (s_.equals("--gzip")) {
 					gzip_ = true;
@@ -171,37 +179,62 @@ class JDBCExample {
 				int random_ = (int )(Math.random() * 50 + 1);
 				String tmp_ = flagfile_ + random_;
 				PrintStream out_ = new PrintStream(tmp_);
-
-				endTime_ = System.currentTimeMillis() / 1000l;
+				Date endTS_ = new Date();
 
 				out_.println("{");
-				out_.println("\t\042extract_cnt\042 : \042" + extractCnt_ + "\042");
-				out_.println("\t,\042start_secs\042 : \042" + startTime_ + "\042");
-				out_.println("\t,\042end_secs\042 : \042" + endTime_ + "\042");
-				out_.println("\t,\042columns\042 : [");
+				out_.println("\t" + qquote("fields") + ": [");
 
-				for (int i = 1; i <= md_.getColumnCount(); i++) {
-					String name_ = md_.getColumnLabel(i);
-					String typeName_ = md_.getColumnTypeName(i);
-					int nullable_ = md_.isNullable(i);
-					int precision_ = md_.getPrecision(i);
-					int scale_ = md_.getScale(i);
+				for (int i_ = 1; i_ <= md_.getColumnCount(); i_++) {
+					String name_ = md_.getColumnLabel(i_);
+					String typeName_ = md_.getColumnTypeName(i_);
+					int nullable_ = md_.isNullable(i_);
+					int precision_ = md_.getPrecision(i_);
+					int scale_ = md_.getScale(i_);
 
 					out_.print("\t\t");
 
-					if (i > 1)
-						out_.print(",");
-
 					out_.println("{");
-					out_.println("\t\t\t\042name\042 : \042" + name_ + "\042,");
-					out_.println("\t\t\t\042type\042 : \042" + typeName_ + "\042,");
-					out_.println("\t\t\t\042precision\042 : \042" + precision_ + "\042,");
-					out_.println("\t\t\t\042scale\042 : \042" + scale_ + "\042,");
-					out_.println("\t\t\t\042nullable\042 : \042"
-							+ (nullable_ == DatabaseMetaData.columnNullable ? 1 : 0) + "\042");
-					out_.println("\t\t}");
+					out_.println("\t\t\t" + qquote("metadata") + ": { ");
+					out_.println("\t\t\t\t" + qquote("name") + ": " + qquote(name_));
+					out_.println("\t\t\t},");
+					out_.println("\t\t\t" + qquote("name") + ": " + qquote(name_) + ",");
+					out_.println("\t\t\t" + qquote("nullable") + ": "
+							+ (nullable_ == DatabaseMetaData.columnNullable ? "true" : "false") + ",");
+					if (typeName_.equals("INTEGER") || typeName_.equals("TIMESTAMP")) {
+						typeName_ = typeName_.toLowerCase();
+						out_.println("\t\t\t" + qquote("type") + ": " + qquote(typeName_));
+					}
+					else if (typeName_.equals("BIGINT")) {
+						out_.println("\t\t\t" + qquote("type") + ": " + qquote("long"));
+					}
+					else if (typeName_.equals("VARCHAR") || typeName_.equals("CHAR")) {
+						out_.println("\t\t\t" + qquote("type") + ": " + qquote("string"));
+					}
+					else if (typeName_.equals("NUMERIC")) {
+						out_.println("\t\t\t" + qquote("type") + ": "
+								+ qquote("decimal("+ precision_ + "," + scale_ + ")"));
+					}
+					else {
+						out_.println("\t\t\t" + qquote("type") + ": " + qquote(typeName_) + ",");
+						out_.println("\t\t\t" + qquote("precision") + ": " + precision_ + ",");
+						out_.println("\t\t\t" + qquote("scale") + ": " + scale_);
+					}
+					out_.print("\t\t}");
+					if (i_ > 0 && i_ < md_.getColumnCount())
+						out_.print(",");
+					out_.println();
 				}
-				out_.println("\t]");
+				out_.println("\t],");
+				out_.println("\t" + qquote("extract_cnt") + ": " + extractCnt_ + ",");
+				out_.println("\t" + qquote("start_secs") + ": " + startTS_.getTime() / 1000l + ",");
+				out_.println("\t" + qquote("end_secs") + ": " + endTS_.getTime() / 1000l + ",");
+				out_.println("\t" + qquote("run_secs") + ": " + (endTS_.getTime() - startTS_.getTime())/ 1000l + ",");
+
+				SimpleDateFormat sdf_ = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+				sdf_.setTimeZone(TimeZone.getTimeZone("GMT"));
+
+				out_.println("\t" + qquote("start_ts") + ": " + qquote(sdf_.format(startTS_) + "Z") + ",");
+				out_.println("\t" + qquote("end_ts") + ": " + qquote(sdf_.format(endTS_) + "Z"));
 				out_.println("}");
 				out_.close();
 

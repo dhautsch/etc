@@ -44,8 +44,6 @@ class JDBCExample {
 			String flagfile_ = null;
 			boolean gzip_ = false;
 			Date startTS_ = new Date();
-//			long startTime_ = startTS_.getTime() / 1000l;
-//			long endTime_ = startTime_;
 			int argCnt_ = args.length;
 
 			for (String s_ : args) {
@@ -96,19 +94,19 @@ class JDBCExample {
 				printUsage_ = true;
 			
 			if (printUsage_) {
-				System.out.println("Usage : " + JDBCExample.class.getName()
+				System.err.println("Usage : " + JDBCExample.class.getName()
 						+ "[--sqlfile=(path|stdin|-) --flagfile=path --col-delim=colDelim --null-str=STR --gzip]");
-				System.out.println("\t--sqlfile=(path|stdin|-) : OPTIONAL. Path to file containing sql, default to stdin.");
+				System.err.println("\t--sqlfile=(path|stdin|-) : OPTIONAL. Path to file containing sql, default to stdin.");
 				System.err.println("\t--flagfile=path : OPTIONAL. Write meta data and extracted count to file.");
-				System.out.println("\t--col-delim : OPTIONAL. Character for column delimiter in decimal. Defaults to |.");
-				System.out.println("\t--null-str : OPTIONAL. String to output for nulls.");
-				System.out.println("\t--gzip : OPTIONAL. Gzip output.");
-				System.out.println();
-				System.out.println("export JDBC_DRIVER=org.netezza.Driver");
-				System.out.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");
-				System.out.println();
-				System.out.println("export JDBC_DRIVER=oracle.jdbc.OracleDriver");
-				System.out.println("export JDBC_URL=jdbc:oracle:thin:USER/PASS@//HOST:PORT/SID");
+				System.err.println("\t--col-delim : OPTIONAL. Character for column delimiter in decimal. Defaults to |.");
+				System.err.println("\t--null-str : OPTIONAL. String to output for nulls.");
+				System.err.println("\t--gzip : OPTIONAL. Gzip output.");
+				System.err.println();
+				System.err.println("export JDBC_DRIVER=org.netezza.Driver");
+				System.err.println("export JDBC_URL=jdbc:netezza://HOST:PORT/DB?user=USER&password=PASS");
+				System.err.println();
+				System.err.println("export JDBC_DRIVER=oracle.jdbc.OracleDriver");
+				System.err.println("export JDBC_URL=jdbc:oracle:thin:USER/PASS@//HOST:PORT/SID");
 				System.exit(0);
 			}
 
@@ -117,10 +115,10 @@ class JDBCExample {
 			conn_ = DriverManager.getConnection(System.getenv("JDBC_URL"));
 
 			for (SQLWarning warn = conn_.getWarnings(); warn != null; warn = warn.getNextWarning()) {
-				System.out.println("SQL Warning:");
-				System.out.println("State  : " + warn.getSQLState());
-				System.out.println("Message: " + warn.getMessage());
-				System.out.println("Error  : " + warn.getErrorCode());
+				System.err.println("SQL Warning:");
+				System.err.println("State  : " + warn.getSQLState());
+				System.err.println("Message: " + warn.getMessage());
+				System.err.println("Error  : " + warn.getErrorCode());
 			}
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -200,17 +198,21 @@ class JDBCExample {
 					out_.println("\t\t\t" + qquote("name") + ": " + qquote(name_) + ",");
 					out_.println("\t\t\t" + qquote("nullable") + ": "
 							+ (nullable_ == DatabaseMetaData.columnNullable ? "true" : "false") + ",");
+
 					if (typeName_.equals("INTEGER") || typeName_.equals("TIMESTAMP")) {
 						typeName_ = typeName_.toLowerCase();
 						out_.println("\t\t\t" + qquote("type") + ": " + qquote(typeName_));
 					}
+					else if (typeName_.equals("DATE")) {
+						out_.println("\t\t\t" + qquote("type") + ": " + qquote("timestamp"));
+					}
 					else if (typeName_.equals("BIGINT")) {
 						out_.println("\t\t\t" + qquote("type") + ": " + qquote("long"));
 					}
-					else if (typeName_.equals("VARCHAR") || typeName_.equals("CHAR")) {
+					else if (typeName_.startsWith("VARCHAR") || typeName_.equals("CHAR")) {
 						out_.println("\t\t\t" + qquote("type") + ": " + qquote("string"));
 					}
-					else if (typeName_.equals("NUMERIC")) {
+					else if (typeName_.equals("NUMERIC") || typeName_.equals("NUMBER")) {
 						out_.println("\t\t\t" + qquote("type") + ": "
 								+ qquote("decimal("+ precision_ + "," + scale_ + ")"));
 					}
@@ -248,17 +250,17 @@ class JDBCExample {
 			stmt_.close();
 			conn_.close();
 		} catch (SQLException se_) {
-			System.out.println("SQL Exception:");
+			System.err.println("SQL Exception:");
 
 			while (se_ != null) {
-				System.out.println("State  : " + se_.getSQLState());
-				System.out.println("Message: " + se_.getMessage());
-				System.out.println("Error  : " + se_.getErrorCode());
+				System.err.println("State  : " + se_.getSQLState());
+				System.err.println("Message: " + se_.getMessage());
+				System.err.println("Error  : " + se_.getErrorCode());
 
 				se_ = se_.getNextException();
 			}
 		} catch (Exception e_) {
-			System.out.println(e_);
+			System.err.println(e_);
 		} finally {
 			// finally block used to close resources
 			try {

@@ -1,0 +1,10 @@
+--
+-- find gaps in keys
+--
+SELECT my_table_pk + 1 AS gap
+FROM my_table mo
+WHERE NOT EXISTS
+            (SELECT NULL
+               FROM my_table mi
+              WHERE mi.my_table_pk = mo.my_table_pk + 1)
+ORDER BY my_table_pk

@@ -22,7 +22,7 @@ export MY_AWS_BUCKET=<Your AWS Bucket>
 export MY_AD_USERNAME=<Your AD Domain\\Your AD id>
 export MY_AD_PASSWORD=<Your AD Password>
 -- OPTIONALLY --
-export MY_PROXY_HOST=<Host> - defaults bcproxy.fanniemae.com
+export MY_PROXY_HOST=<Host> - defaults proxy
 export MY_PROXY_PORT=<Port> - defaults to 80
 export MY_AWS_BUCKET_KEY_PREFIX - Limits the response to keys that begin with the specified prefix.""".format(SCRIPT))
         sys.exit(0)
@@ -30,10 +30,10 @@ export MY_AWS_BUCKET_KEY_PREFIX - Limits the response to keys that begin with th
 ROLE = os.getenv('MY_AWS_ROLE')
 BUCKET = os.getenv('MY_AWS_BUCKET')
 
-IDP_URL = os.getenv('MY_AWS_URL') # 'https://sts.fanniemae.com/adfs/ls/idpinitiatedsignon.aspx?loginToRp=urn:amazon:webservices'
-USERNAME = os.getenv('MY_AD_USERNAME') # 'fanniemae\\r2udeh'
+IDP_URL = os.getenv('MY_AWS_URL')
+USERNAME = os.getenv('MY_AD_USERNAME')
 USER_PASSWORD = os.getenv('MY_AD_PASSWORD')
-PROXY_HOST = os.getenv('MY_PROXY_HOST', 'bcproxy.fanniemae.com')
+PROXY_HOST = os.getenv('MY_PROXY_HOST', 'proxy')
 PROXY_PORT = os.getenv('MY_PROXY_PORT', '80')
 PROXY_USERNAME = USERNAME.split('\\')[1]
 PROXY_URL = 'http://' + PROXY_USERNAME + ':' + USER_PASSWORD + '@' + PROXY_HOST + ':' + PROXY_PORT + '/'

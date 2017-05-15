@@ -20,12 +20,23 @@
 (put 'downcase-region 'disabled nil)
 (put 'eval-expression 'disabled nil)
 
+(setenv "ZZZ_EMACS" "t")
+
 (setq scroll-step 1)
 (setq display-warning-minimum-level 'error)
 (setq display-time-24hr-format t)
 (setq blink-matching-paren t)
 (setq case-fold-search t)
 (setq emerge-diff-options "-b -w")
+(setq visible-bell t)
+
+;;; force split sensibly to go vertical
+(setq split-height-threshold 0)
+(setq split-width-threshold nil)
+
+(menu-bar-mode 0)
+(show-paren-mode t)
+
 
 ;;; disable Version Control dired recursion
 (setq vc-dired-recurse nil)

@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.Console;
 import java.io.File;
 import java.io.InputStreamReader;
-
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -11,13 +10,13 @@ public class Blowfish {
 	 * Returns argv[0] decrypted string. The string has to be encrypted using
 	 * -Dencrypt=t with the key in final static char [] SHORT_KEY or use the
 	 * runnable BlowfishApp.jar JavaFX application to encrypt the string. If the
-	 * decrypted string is in one of the following forms: string:uid or
-	 * string:uid0,uid1,... then the "string" part is returned only if the
+	 * decrypted string is in one of the following forms: string\001uid or
+	 * string\001uid0\001uid1\001... then the "string" part is returned only if the
 	 * user.name system property is in uid, uid0, uid1. To return the "string"
 	 * part and uid list use -Drawoutput=t
 	 * 
 	 * Note if K > 16 chars then you need to include other jars for handling
-	 * large keys
+	 * large keys. Run gen_key_Blowfish.pl to generate K.
 	 * 
 	 * @author don@hautsch.com
 	 *
@@ -28,7 +27,7 @@ public class Blowfish {
 	final static char[] P5 = { 'C', ':', '\\', 'W', 'i', 'n', 'd', 'o', 'w', 's', '\\', 'S', 'y', 's', 't', 'e', 'm', '3', '2', '\\', 'w', 'h', 'o', 'a', 'm', 'i' };
 	final static String HEX_STRING = "0123456789ABCDEF";
 
-	final static char[] K = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+        final static char[] K = { '0', 'E', '3', '7', 'B', '5', '6', 'E', '6', 'C', '4', 'D', 'F', 'E', 'E', 'D' };
 
 	public static String whoAmI() {
 		String ret_ = HEX_STRING;
@@ -63,32 +62,58 @@ public class Blowfish {
 			Console console_ = System.console();
 
 			if (console_ != null) {
+				String toEncrypt_;
 				s_ = console_.readLine("String to encrypt: ");
 
 				if (s_ != null && s_.isEmpty() == false) {
-					System.out.println("String entered : '" + s_ + "'");
-					System.out.println("String encrypted: '" + encrypt(s_) + "'");
+					toEncrypt_ = s_;
+					StringBuilder sb_ = new StringBuilder(s_);
+
+					s_ = console_.readLine("Space delimited ids that can decrypt: ");
+
+					if (s_ != null && s_.trim().isEmpty() == false) {
+						StringBuilder ids_ = new StringBuilder();
+
+						for (String id_ : s_.trim().split("\\s+")) {
+							if (ids_.length() > 0) {
+								ids_.append(",");
+							}
+							ids_.append(id_);
+						}
+
+						System.out.println("Decrypt ids: " + ids_.toString());
+
+						sb_.append("\001");
+
+						sb_.append(ids_.toString().replaceAll(",", "\001"));
+					}
+
+					System.out.println("String entered : '" + toEncrypt_ + "'");
+
+					System.out.println("String encrypted: '" + encrypt(sb_.toString()) + "'");
 				}
 			}
 		} else if (args != null && args.length == 1 && args[0].isEmpty() == false) {
 			s_ = decrypt(args[0]);
 
 			if (s_ != null && s_.isEmpty() == false) {
-				String[] ret_ = s_.split("[:,]");
+				String[] ret_ = s_.split("\001");
 
-				if (System.getProperty(new String(P3)) != null) {
-					System.out.println(s_);
-				} else if (ret_.length == 1) {
-					System.out.println(ret_[0]);
-				} else if (ret_.length > 1) {
-					s_ = whoAmI();
+				if (ret_.length > 1) {
+					String whoAmI_ = whoAmI();
 
 					for (int i_ = 1; i_ < ret_.length; i_++) {
-						if (ret_[i_].equals(s_)) {
-							System.out.println(ret_[0]);
+						if (ret_[i_].equals(whoAmI_)) {
+							if (System.getProperty(new String(P3)) != null)
+								System.out.println(s_);
+							else
+								System.out.println(ret_[0]);
 							break;
 						}
 					}
+				}
+				else {
+					System.out.println(s_);
 				}
 			}
 		}

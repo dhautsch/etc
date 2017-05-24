@@ -7,8 +7,12 @@
 (global-set-key [f1] 'set-mark-command)
 (global-set-key [f2] 'match-paren)
 (global-set-key [f3] 'goto-line)
+;;; C-X ^ -- enlarge-window
+;;; C-X + -- balance-windows
 (global-set-key [f4] 'enlarge-window)
 (global-set-key [f5] 'exchange-point-and-mark)
+;;; C-x ( calls start-kbd-macro
+;;; C-x ) calls end-kbd-macro
 (global-set-key [f6] 'call-last-kbd-macro)
 (global-set-key [f7] 'query-replace-regexp)
 (global-set-key [f8] 'next-error)

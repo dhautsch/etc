@@ -6,14 +6,24 @@ use File::Basename;
 use Getopt::Long;
 use strict;
 
+my $UNAME = qx(uname); chomp $UNAME;
 sub ps {
-	my @ret_;
+        my @ret_;
+        my $cmd_ = 'ps --columns=2000 -ef 2>&1';
 
-	foreach (qx(ps --columns=2000 -ef 2>&1)) {
-		push @ret_, $_ if m!/usr/bin/perl\s+(\-d\s+)*$0\s+\-start!;
-	}
+        if ($UNAME eq 'SunOS') {
+                $ENV{COLUMNS} = 2000;
+                $cmd_ = 'ps -ef 2>&1';
+        }
 
-	return @ret_;
+        foreach (qx($cmd_)) {
+                if (m!/usr/bin/perl\s+(\-d\s+)*$0\s+\-start!) {
+                        s!^\s+!!;
+                        push @ret_, $_;
+                }
+        }
+
+        return @ret_;
 }
 
 my $HOST = qx(uname -n); chomp $HOST;
@@ -169,6 +179,10 @@ sub logmsg {
 	print STDERR "$$:$ts_ @_\n";
 }
 
+foreach my $p_ (glob("http-$HOST_ALIAS-*-tmp")) {
+	unlink($p_);
+}
+
 my $PORT = $PROP{$PROP[$#PROP]};
 
 my $PROTO = getprotobyname('tcp');
@@ -314,7 +328,11 @@ while(1) {
 			# causes the sync and returns the file size
 			#
 			@a_ = split(/\s+/, scalar(qx(wc -c $TMP)));
-			$l_ = $a_[0];
+			foreach (qx(wc -c $TMP)) {
+				s!^\s+!!;
+				@a_ = split;
+				$l_ = $a_[0];
+			}
 #			logmsg "xx l_=$l_";
 
 			$httpStat_ = "200 OK";

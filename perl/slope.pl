@@ -2,7 +2,6 @@
 # How to Calculate Trendline
 # http://classroom.synonym.com/calculate-trendline-2709.html
 # Zero slope is flat. Postitive is up. Negative is down.
-#
 use strict;
 
 my @XY = ( 1, 3, 2, 5, 3, 6.5);
@@ -50,3 +49,4 @@ sub slope {
 
 @XY = slope(@XY);
 print "SLOPE:$XY[0] Y-INTERCEPT:$XY[1]\n";
+print "TRENDLINE EQUATION: Y=$XY[0]*X + $XY[1]\n";

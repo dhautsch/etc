@@ -126,3 +126,46 @@ select
    trunc(sysdate-startup_time))), 60) ||' seconds' uptime
 from
    sys.v_$instance;
+
+
+CREATE OR REPLACE PROCEDURE A22RPT.DROP_INTERVAL_PARTITION (C_TBL_NAME     VARCHAR2,
+                                                     C_PART_NAME    VARCHAR2)
+AS
+   CURRENT_INTERVAL   VARCHAR2 (1000);
+BEGIN
+   SELECT INTERVAL
+     INTO CURRENT_INTERVAL
+     FROM USER_PART_TABLES
+    WHERE TABLE_NAME IN (SELECT table_name FROM user_tab_partitions WHERE table_name = C_TBL_NAME AND partition_name = C_PART_NAME);
+
+IF LENGTH(CURRENT_INTERVAL) > 0
+THEN
+   EXECUTE IMMEDIATE 'ALTER TABLE ' || C_TBL_NAME || ' SET INTERVAL ()';
+   EXECUTE IMMEDIATE 'ALTER TABLE ' || C_TBL_NAME || ' DROP PARTITION ' || C_PART_NAME;
+   EXECUTE IMMEDIATE 'ALTER TABLE ' || C_TBL_NAME || ' SET INTERVAL ('  || CURRENT_INTERVAL || ')';
+END IF;
+END;
+
+CREATE OR REPLACE function A22RPT.get_high_value_as_date(
+  p_table_name     in varchar2,
+  p_partition_name in varchar2
+) return date as
+  v_high_value varchar2(1024);
+  v_date        date;
+begin
+  select high_value into v_high_value from user_tab_partitions
+    where table_name = upper(p_table_name)
+      and partition_name = upper(p_partition_name);
+  execute immediate 'select ' || v_high_value || ' from dual' into v_date;
+  return v_date;
+end;
+
+CREATE OR REPLACE function A22RPT.get_cnt_from_partition(
+  p_table_name     in varchar2,
+  p_partition_name in varchar2
+) return integer as
+  v_cnt        integer;
+begin
+  execute immediate 'SELECT COUNT(*) as CNT FROM ' || p_table_name || ' PARTITION(' || p_partition_name || ')' into v_cnt;
+  return v_cnt;
+end;

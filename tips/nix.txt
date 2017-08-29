@@ -52,3 +52,13 @@ KEY_FILE=/export/appl/website/https-dstate-etl08EME/run/cgi-bin/key.aes
 pktool genkey keystore=file outkey=$(basename $KEY_FILE) keytype=aes keylen=128 dir=$(dirname $KEY_FILE)
 encrypt -a aes -k $KEY_FILE -i clear.txt -o crypt.txt
 decrypt -a aes -k $KEY_FILE -i crypt.txt
+
+#
+# This works for short messages ~ 255 bytes
+# Following converts rsa pub key to pem
+ssh-keygen -f ~/.ssh/a22rpt.pub -e -m PKCS8 > a22rpt.pem.pub
+
+openssl rsautl -encrypt -pubin -inkey a22rpt.pem.pub -ssl -in myMessage.txt -out myEncryptedMessage.txt
+
+openssl rsautl -decrypt -inkey ~/.ssh/a22rpt -in myEncryptedMessage.txt # to stdout
+openssl rsautl -decrypt -inkey ~/.ssh/a22rpt -in myEncryptedMessage.txt -out myDecryptedMessage.txt

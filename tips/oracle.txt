@@ -169,3 +169,25 @@ begin
   execute immediate 'SELECT COUNT(*) as CNT FROM ' || p_table_name || ' PARTITION(' || p_partition_name || ')' into v_cnt;
   return v_cnt;
 end;
+
+
+#
+# for sqlplus -s /nolog
+#
+CONNECT user/pass@SID;
+SET AUTOCOMMIT OFF;
+SET SERVEROUTPUT ON;
+
+BEGIN
+  SAVEPOINT start_tran;
+  INSERT INTO .... ; -- first DML
+  UPDATE .... ; -- second DML
+  BEGIN ... END; -- some other work
+  UPDATE .... ; -- final DML
+  dbms_output.put_line('Updated : ' || SQL%ROWCOUNT);
+COMMIT;
+EXCEPTION
+  WHEN OTHERS THEN
+    ROLLBACK TO start_tran;
+END;
+/

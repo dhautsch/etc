@@ -62,3 +62,35 @@ openssl rsautl -encrypt -pubin -inkey a22rpt.pem.pub -ssl -in myMessage.txt -out
 
 openssl rsautl -decrypt -inkey ~/.ssh/a22rpt -in myEncryptedMessage.txt # to stdout
 openssl rsautl -decrypt -inkey ~/.ssh/a22rpt -in myEncryptedMessage.txt -out myDecryptedMessage.txt
+
+
+Manipulating Variables (ksh/bash only) http://www.dartmouth.edu/%7Erc/classes/ksh/variable-manipulation.html
+Text variables
+The pattern in the following uses the same wildcards as for filename matching.
+
+${#var}
+    returns the length of $var in characters 
+${var%pattern}
+    removes the shortest suffix of $var patching pattern 
+${var%%pattern}
+    removes the longest suffix of $var patching pattern 
+${var#pattern}
+    removes the shortest prefix of $var patching pattern 
+${var##pattern}
+    removes the longest prefix of $var patching pattern 
+
+Numeric variables
+
+$(( integer expression ))
+    The $(( ... )) construction interprets the contents as an arithmetic expression (integer only). Variables are referenced by name without the "$". Most of the arithmetic syntax of the 'C' language is supported, including bit manipulations (*,/,+,-,|,&,<<,>>. Use parentheses for changing precedence). 
+
+Examples
+datapath=/data/public/project/trials/set1/datafile.dat
+
+filename=${datapath##*/}
+    filename is set to "datafile.dat" since the longest prefix pattern matching "*/" is the leading directory path (compare basename) 
+path=${datapath%/*}
+    path is set to "/data/public/project/trials/set1" since the shortest suffix pattern matching "/*" is the filename in the last directory (compare dirname)
+
+i=$((i+1))
+    often used in while loops 

@@ -29,6 +29,9 @@ SELECT
 -- get user/sid
 SELECT user || '@' || SYS_CONTEXT('USERENV','DB_NAME') from dual
 
+--- 1505298000 is number of secs since 1970-01-01 GMT
+SELECT CAST(FROM_TZ(TO_timestamp ('19700101000000', 'YYYYMMDDHH24MISS') + NUMTODSINTERVAL (1505298000, 'SECOND'), 'GMT')  AT TIME ZONE sessiontimezone AS date ) UNIX_TIME_TO_LOCAL_DATE FROM dual;
+
 --- ISO timestamp
 select to_char(sysdate, 'YYYY-MM-DD"T"HH24:MI:SS') from dual
 select to_date('2015-11-24 00:00:00', 'YYYY-MM-DD HH24:MI:SS') from dual

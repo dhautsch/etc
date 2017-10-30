@@ -191,6 +191,7 @@ BEGIN
 COMMIT;
 EXCEPTION
   WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Error code ' || SQLCODE || ': ' || SQLERRM);
     ROLLBACK TO start_tran;
 END;
 /

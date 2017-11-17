@@ -1,0 +1,87 @@
+
+#
+# gen priv rsa pem key
+#
+openssl genrsa -out $HOME/.ssh/id_rsa 1024
+chmod go-rwx $HOME/.ssh/id_rsa
+echo IdentityFile $HOME/.ssh/id_rsa > $HOME/.ssh/config
+
+#
+# gen ssh pub key from priv rsa pem key
+#
+ssh-keygen -y -f $HOME/.ssh/id_rsa > $HOME/.ssh/id_rsa.pub
+
+#
+# get keys details
+#
+openssl rsa -in $HOME/.ssh/id_rsa -text -noout
+
+#
+# output pub rsa pem key from priv rsa pem key
+# PEM form is the default format.
+#
+openssl rsa -in $HOME/.ssh/id_rsa -pubout -outform pem > $HOME/.ssh/id_rsa.pem.pub
+openssl rsa -in $HOME/.ssh/id_rsa -pubout > $HOME/.ssh/id_rsa.pem.pub
+
+#
+# encrypt to binary using pub rsa pem key. Only works for small data.
+#
+openssl rsautl -encrypt -pubin -inkey $HOME/.ssh/id_rsa.pem.pub -in myMessage.txt -out xx.txt
+
+#
+# decrypt from binary using priv rsa pem key. Only works for small data.
+#
+openssl rsautl -decrypt -inkey $HOME/.ssh/id_rsa -in xx.txt
+
+#
+# encrypt to text using pub rsa pem key. Only works for small data.
+#
+# Warning base64 line length is limited to 76 characters by default in openssl ( and generated with 64 characters / line ).
+# to be able to decode a base64 line without line feed that exceed 76 characters use -A option
+#
+#
+# Note when using -A newline is not added to output
+#
+openssl rsautl -encrypt -pubin -inkey $HOME/.ssh/id_rsa.pem.pub -in myMessage.txt | openssl base64 -e -A > xx.txt
+
+#
+# decrypt from text using priv rsa pem key. Only works for small data.
+#
+# Warning base64 line length is limited to 76 characters by default in openssl ( and generated with 64 characters / line ).
+# to be able to decode a base64 line without line feed that exceed 76 characters use -A option
+#
+# Note when using -A newline is not added to output
+#
+openssl base64 -d -A < xx.txt | openssl rsautl -decrypt -inkey $HOME/.ssh/id_rsa
+
+#
+# Same as previous example except adding newline from echo which is ignored
+#
+echo $(cat xx.txt) | openssl base64 -d -A | openssl rsautl -decrypt -inkey $HOME/.ssh/id_rsa
+
+#
+# http://www.czeskis.com/random/openssl-encrypt-file.html
+#
+# Step 1) Generate a 256 bit (32 byte) random key
+#
+openssl rand -base64 32 -out key.bin
+
+#
+# Step 2) Encrypt the key using rsa pem pub key
+#
+openssl rsautl -encrypt -inkey $HOME/.ssh/id_rsa.pem.pub -pubin -in key.bin | openssl base64 -e -out key.b64
+
+#
+#
+#
+Step 3) Actually Encrypt our large file
+openssl enc -aes-256-cbc -salt -in SECRET_FILE -pass file:./key.bin | openssl base64 -e -out SECRET_FILE.b64
+rm ./key.bin
+
+#
+# Step 4) 
+# Decrypt the key.b64 using rsa priv pem key
+# Decrypt the SECRET_FILE.b64 using key.bin
+#
+openssl base64 -d -in key.b64 | openssl rsautl -decrypt -inkey $HOME/.ssh/id_rsa -out key.bin
+openssl base64 -d -in SECRET_FILE.b64 | openssl enc -d -aes-256-cbc -pass file:./key.bin -out SECRET_FILE

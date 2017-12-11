@@ -1,0 +1,25 @@
+#
+# Get citrix reciever from https://www.citrix.com/downloads/citrix-receiver/linux/
+# for rapberry pi get Debian Web Package for ARM HF
+#
+#
+# If you run into Root Cert issues the down load root certs from Verisign and extract
+#   VeriSign Root Certificates/Generation 5 (G5) PCA/VeriSign Class 3 Public Primary Certification Authority - G5.pem
+# and copy to
+#   /opt/Citrix/ICAClient/keystore/cacerts/VeriSign Class 3 Public Primary Certification Authority - G5.pem
+#
+
+#
+# Check which citrix pkg installed
+#
+dpkg -l|grep -i citrix
+
+#
+# Remove old client
+#
+sudo apt-get remove icaclient
+
+#
+# Install client
+#
+sudo dpkg -i icaclientWeb_13.8.0.10299729_armhf.deb

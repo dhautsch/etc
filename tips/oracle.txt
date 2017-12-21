@@ -195,3 +195,114 @@ EXCEPTION
     ROLLBACK TO start_tran;
 END;
 /
+
+
+/*
+** https://stackoverflow.com/questions/622289/how-to-check-oracle-database-for-long-running-queries#625147
+** queries for checking what is going on with server. gv$ is for RAC use v$ otherwise
+** This one shows SQL that is currently "ACTIVE"
+*/
+
+  SELECT NVL (s.username, '(oracle)') AS username,
+         s.osuser,
+         s.inst_id,
+         s.sid,
+         s.serial#,
+         p.spid,
+         t.sql_id,
+         sql_text
+    FROM gv$sqltext_with_newlines t, gv$session s, gv$process p
+   WHERE     t.address = s.sql_address
+         AND t.hash_value = s.sql_hash_value
+         AND s.status = 'ACTIVE'
+         AND s.username <> 'SYSTEM'
+         AND s.paddr = p.addr
+         AND s.inst_id = p.inst_id
+ORDER BY s.sid, t.piece;
+
+/*
+** This shows locks. Sometimes things are going slow, but it's because it is blocked waiting for a lock
+*/
+
+  SELECT NVL (vo.oracle_username, '(oracle)') AS username,
+         vo.os_user_name                    AS osuser,
+         vo.session_id,
+         ao.object_name,
+         ao.object_type,
+         l.type,                                   -- Type or system/user lock
+         l.lmode,                     -- lock mode in which session holds lock
+         l.request,
+         l.block,
+         l.ctime                        -- Time since current mode was granted
+    FROM gv$locked_object vo, all_objects ao, gv$lock l
+   WHERE     vo.object_id = ao.object_id
+         AND l.id1 = ao.object_id
+         AND l.sid = vo.session_id
+ORDER BY vo.session_id, l.ctime DESC, ao.object_name;
+
+/*
+** This is a good one for finding long operations (e.g. full table scans). If it is because of lots of short operations, nothing will show up.
+*/
+
+SELECT NVL (s.username, '(oracle)')                      AS username,
+       s.osuser,
+       l.inst_id,
+       l.sid,
+       l.serial#,
+       p.spid,
+       s.lockwait,
+       s.status,
+       CASE
+           WHEN s.status = 'ACTIVE' OR s.status = 'INACTIVE'
+           THEN
+               FLOOR (s.last_call_et / 60)
+           ELSE
+               NULL
+       END
+           last_call_et,
+       s.module,
+       s.machine,
+       s.command,
+       s.program,
+       TO_CHAR (s.logon_time, 'YYYY-MM-DD"T"HH24:MI:SS') logon_time,
+       TO_CHAR (SYSDATE, 'YYYY-MM-DD"T"HH24:MI:SS')      AS curr_time,
+       TO_CHAR (l.start_time, 'hh24:mi:ss')              start_time,
+       l.message,
+       (l.sofar / l.totalwork) * 100                     percent
+  FROM gv$session_longops l, gv$session s, gv$process p
+ WHERE     l.sofar / l.totalwork < 1
+       AND s.INST_ID = l.INST_ID
+       AND s.SID = l.SID
+       AND s.SERIAL# = l.SERIAL#
+       AND s.paddr = p.addr
+       AND s.inst_id = p.inst_id;
+
+/*
+** show connections
+*/
+
+  SELECT NVL (s.username, '(oracle)')                    username,
+         s.osuser,
+         s.inst_id,
+         s.sid,
+         s.serial#,
+         p.spid,
+         s.lockwait,
+         s.status,
+         CASE
+             WHEN s.status = 'ACTIVE' OR s.status = 'INACTIVE'
+             THEN
+                 FLOOR (s.last_call_et / 60)
+             ELSE
+                 NULL
+         END
+             last_call_et,
+         s.module,
+         s.machine,
+         s.command,
+         s.program,
+         TO_CHAR (s.logon_time, 'YYYY-MM-DD"T"HH24:MI:SS') logon_time,
+         TO_CHAR (SYSDATE, 'YYYY-MM-DD"T"HH24:MI:SS')    AS curr_time
+    FROM gv$session s, gv$process p
+   WHERE s.paddr = p.addr AND s.inst_id = p.inst_id
+ORDER BY s.username, s.osuser;

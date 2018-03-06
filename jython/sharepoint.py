@@ -1,214 +1,208 @@
-"""SPList class to interact with SharePoint
+"""Class to interact with SharePoint List
 
-from sharepoint import SPList
+    SP = SharePoint('user@pass', 'http://sharepoint', 'Bogus')
 
-SP_LIST = SPList('domain\\scott', 'tiger', 'http://sharepoint', 'Bogus_List')
+    listMeta_ = SP.getMeta()
+    pp(listMeta_)
 
-ret_ = SP_LIST.addItem({'ELAPSED_SECS': 0, 'EXTRACT_CNT': 0, 'STATUS': 'RUNNING', 'Title': 'nemo'})
+    ret_ = SP.getItems()
+    if ret_ is not None:
+        for item_ in ret_:
+            print('First  fetch ' + item_['Title'])
 
-ret_ = SP_LIST.updateItem(ret_['ID'], {'ELAPSED_SECS': 20, 'EXTRACT_CNT': 200, 'STATUS': 'DONE'})
+    ret_ = SP.getItems({'$top': listMeta_['ItemCount']})
+    if ret_ is not None:
+        for item_ in ret_:
+            print('Second fetch ' + item_['Title'])
 
-for o_ in SP_LIST.getItems('$filter', "Title eq 'nemo'"):
-    pass
+#    ret_ = SP.merge({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'New_bogus-201803051650' }, 74)
+#    ret_ = SP.append({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'Updated---201803021650' })
+
+    ret_ = SP.merge( { 'Title': 'New_bogus-201803051650' }, 74)
+    pp(ret_)
+    
+    ret_ = SP.append({ 'Title': 'Updated---201803021650' })
+    pp(ret_)
+
+    ret_ = SP.getItem(74)
+    pp(ret_)
+
+    ret_ = SP.remove(73)
+    pp(ret_)
 """
 
+import time
+import json
 import requests
 from requests_ntlm import HttpNtlmAuth
-import json
 
-class SPList:
-    """Class to interact with SharePoint"""
-    
-    _httpAuth = None
-    _session = None
-    _urls = None
-    _headers = { 'accept' : 'application/json;odata=verbose' }
+class SharePoint(object):
+    def __init__(self, connect, url, spList):
+        self._digest = None
+        self._ListItemEntityTypeFullName = None
+        self._httpAuth = None
+        self._session = None
+        self._connect = connect.decode("utf-8").split('@')
+        self._spList = spList
+        self._url = url
+        self._digestURL = '{}/_api/contextinfo'.format( self._url )
+        self._spList = '{}/_api/lists/getByTitle%28%27{}%27%29'.format( self._url, self._spList)
+        self._spListItems = self._spList + '/items'
+        self._headerForGet    = { 'accept' : 'application/json;odata=verbose' }
+        self._headerForUpsert = { 'accept' : 'application/json;odata=verbose', 'content-type' : 'application/json;odata=verbose', 'IF-MATCH' : '*' }
 
-    def __del__(self):
-        pass
-#        if self._session is not None: self._session.close()
+    def getSession(self):
+        if self._session is None:
+            self._session = requests.Session()
 
-    def __init__(self, spUser, spPass, spUrl, spList):
-        """Construct object to interact with SharePoint.
+            if self._session is None:
+                print("requests.Session() returned None")
+                sys.exit(1)
 
-        :Parameter spUser: domain\\userid string.
-        :Type spUser: str
+        return self._session
 
-        :Parameter spPass: password string.
-        :Type spPass: str
+    def getHttpAuth(self):
+        if self._httpAuth is None:
+            self._httpAuth = HttpNtlmAuth(self._connect[0], self._connect[1], self._session)
 
-        :Parameter spUrl: URL to SharePoint site.
-        :Type spUrl: str
+            if self._httpAuth is None:
+                print("HttpNtlmAuth returned None")
+                sys.exit(1)
 
-        :Parameter spList: the name of the SharePoint List
-        :Type spList: str
-
-        :Return: On success a digest string. On failure, None.
-        """
-        self._session = requests.Session()
-
-        if self._session:
-            self._httpAuth = HttpNtlmAuth(spUser, spPass, self._session)
-
-        if self._httpAuth is not None:
-            self._urls = dict()
-            self._urls['url'] = spUrl
-            self._urls['digest'] = '{}/_api/contextinfo'.format( spUrl )
-            self._urls['sp_list'] = '{}/_api/lists/getByTitle%28%27{}%27%29'.format( spUrl, spList)
-            self._urls['sp_list_items'] = self._urls['sp_list'] + '/items'
-
+        return self._httpAuth
+        
     def getDigest(self):
-        """Get digest from SharePoint.
+        if self._digest is not None:
+            t_ = (int(time.time()) - self._digest['CreateTimeForDigest']) + 300
 
-        :Return: On success a digest string. On failure, None.
-        """
-        ret_ = None
+            if t_ > self._digest['FormDigestTimeoutSeconds']:
+                self._digest = None
 
-        response_ = self._session.post(self._urls['digest']
-                                       , data = {}
-                                       , auth = self._httpAuth
-                                       , headers = self._headers)
-        if response_.status_code == 200:
-            obj_ = response_.json()['d']['GetContextWebInformation'] 
-            ret_ = obj_['FormDigestValue']
+        if self._digest is None:
+            
+            response_ = self.getSession().post(self._digestURL, data = {}, auth = self.getHttpAuth(), headers = self._headerForGet)
 
-        return ret_
+            if response_.status_code == 200:
+                o_ = response_.json()
+                self._digest = dict()
+
+                for s_ in [ 'FormDigestTimeoutSeconds', 'FormDigestValue', 'SiteFullUrl', 'WebFullUrl'  ]:
+                    self._digest[s_] = o_['d']['GetContextWebInformation'][s_]
+
+                self._digest['CreateTimeForDigest'] = int(time.time())
+
+        return self._digest
 
     def getMeta(self):
-        """Get SharePoint list meta data.
-
-        :Return: On success an object containing Title, LastItemDeletedDate, LastItemModifiedDate, ListItemEntityTypeFullName, ItemCount. On failure, None.
-        """
         ret_ = None
 
-        response_ = self._session.get(self._urls['sp_list']
-                                      , auth = self._httpAuth
-                                      , headers = self._headers)
+        response_ = self.getSession().get(self._spList, auth = self.getHttpAuth(), headers = self._headerForGet)
         if response_.status_code == 200:
+            o_ = response_.json()
             ret_ = dict()
-            obj_ = response_.json()
 
-            for s_ in [ 'Title', 'LastItemDeletedDate' , 'LastItemModifiedDate', 'ListItemEntityTypeFullName', 'ItemCount' ]:
-                ret_[s_] = obj_['d'][s_]
+            for s_ in [ 'Created', 'LastItemDeletedDate', 'ListItemEntityTypeFullName', 'LastItemModifiedDate', 'ItemCount', 'Title' ]:
+                ret_[s_] = o_['d'][s_]
 
         return ret_
 
-    def getItems(self, spFilter = None, spFilterValue = None):
-        """Get SharePoint list items.
+    def getItems(self, spListItemsParams = None):
+        ret_ = None
 
-        :Parameter spFilter: SharePoint filter.
-        :Type spFilter: str
-
-        :Parameter spFilterValue: SharePoint filter value.
-        :Type spFilterValue: str
-
-        :Return: On success list of objects from SharePoint. On failure, empty list.
-        """
-        ret_ = []
-        
-        if spFilter is not None:
-            if spFilterValue is not None:
-                response_ = self._session.get(self._urls['sp_list_items']
-                                             , auth = self._httpAuth
-                                             , headers = self._headers, params = {spFilter: spFilterValue})
-                if response_.status_code == 200:
-                    ret_ = response_.json()['d']['results']
-                else:
-                    pass
-            else:
-                pass
+        if spListItemsParams is None:
+            response_ = self.getSession().get(self._spListItems, auth = self.getHttpAuth(), headers = self._headerForGet)
         else:
-            response_ = self._session.get(self._urls['sp_list_items']
-                                          , auth = self._httpAuth
-                                          , headers = self._headers)
-            if response_.status_code == 200:
-                ret_ = response_.json()['d']['results']
-            else:
-                pass
+            response_ = self.getSession().get(self._spListItems, auth = self.getHttpAuth(), headers = self._headerForGet, params = spListItemsParams)
+
+        if response_.status_code == 200:
+            o_ = response_.json()
+            ret_ = o_['d']['results']
 
         return ret_
 
-    def addItem(self, data):
-        """Add a SharePoint list item.
-
-        :Parameter data: Dictionary of columns to add in SharePoint list item.
-        :Type data: dict
-
-        :Return: On success response object from SharePoint. On failure, None.
-        """
+    def getItem(self, spItemID):
         ret_ = None
+
+        url_ = '{}%28{}%29'.format( self._spListItems, spItemID)
+        response_ = self.getSession().get(url_, auth = self.getHttpAuth(), headers = self._headerForGet)
+
+        if response_.status_code == 200:
+            o_ = response_.json()
+            ret_ = o_['d']
+
+        return ret_
         
-        if data is not None and isinstance(data, dict):
-            headers_ = { 'accept' : 'application/json;odata=verbose'
-                         , 'content-type' : 'application/json;odata=verbose'
-                         , 'X-RequestDigest' : self.getDigest()
-                         , 'IF-MATCH' : '*' }
-            data_ = { '__metadata': { 'type': self.getMeta()['ListItemEntityTypeFullName'] }}
+    def remove(self, spItemID):
+        ret_ = None
 
+        if spItemID is not None:
+            digest_ = self.getDigest()
+            if digest_ is not None:
+                headers_ = self._headerForUpsert.copy()
+                headers_['X-RequestDigest'] = digest_['FormDigestValue']
+                url_ = '{}%28{}%29'.format( self._spListItems, spItemID)
 
-            for k_ in data:
-                data_[k_] = data[k_]
+                response_ = self.getSession().delete(url_, auth = self.getHttpAuth(), headers = headers_)
 
-            #
-            # request.post is turning the data object into get query params which is not
-            # what sharepoint is expecting. I found this out by using
-            #   req = Request('POST', url, data=data, headers=headers)
-            #   prepped = req.prepare()
-            # so this is why I am using json.dumps - don@hautsch.com
+                if response_.status_code == 200:
+                    ret_ = { 'ID' : spItemID, 'Id' : spItemID, 'REST_ACTION' : 'DELETE', 'HTTP_STATUS' : response_.status_code }
 
-            data_ =  json.dumps(data_)
+        return ret_
+        
+    def getListItemEntityTypeFullName(self):
+        ret_ = None
 
-            response_ = self._session.post(self._urls['sp_list_items']
-                                           , data = data_
-                                           , auth = self._httpAuth
-                                           , headers = headers_)
-            if int(response_.status_code/100) == 2:
-                ret_ = response_.json()['d']
+        if self._ListItemEntityTypeFullName is None:
+            listMeta_ = SP.getMeta()
+            if listMeta_ is not None and 'ListItemEntityTypeFullName' in listMeta_:
+                self._ListItemEntityTypeFullName = listMeta_['ListItemEntityTypeFullName']
+
+        if self._ListItemEntityTypeFullName is not None:
+            ret_ = self._ListItemEntityTypeFullName
 
         return ret_
 
-    def updateItem(self, spID, data):
-        """Update a SharePoint list item.
-
-        :Parameter spID: The SharePoint list item ID.
-        :Type spID: int
-
-        :Parameter data: Dictionary of columns to update in SharePoint list item.
-        :Type data: dict
-
-        :Return: On success contents of data dict and with a new key/value (ID : spID). On failure, None.
-        """
-
+    def merge(self, spData, spItemID):
         ret_ = None
-        
-        if spID is not None and data is not None and isinstance(data, dict):
-            headers_ = { 'accept' : 'application/json;odata=verbose'
-                         , 'content-type' : 'application/json;odata=verbose'
-                         , 'X-RequestDigest' : self.getDigest()
-                         , 'IF-MATCH' : '*' }
-            data_ = { '__metadata': { 'type': self.getMeta()['ListItemEntityTypeFullName'] }}
+
+        if spData is not None and spItemID is not None:
+            digest_ = self.getDigest()
+            if digest_ is not None:
+                headers_ = self._headerForUpsert.copy()
+                headers_['X-RequestDigest'] = digest_['FormDigestValue']
+                url_ = '{}%28{}%29'.format( self._spListItems, spItemID)
+                data_ = spData
+
+                if '__metadata' not in data_ and self.getListItemEntityTypeFullName() is not None:
+                        data_ = data_.copy()
+                        data_['__metadata'] = { 'type': self._ListItemEntityTypeFullName }
+
+                response_ = self.getSession().request('MERGE', url_, auth = self.getHttpAuth(), headers = headers_, data = json.dumps(data_))
+
+                if response_.status_code == 204:
+                    ret_ = { 'ID' : spItemID, 'Id' : spItemID, 'REST_ACTION' : 'MERGE', 'HTTP_STATUS' : response_.status_code }
+
+        return ret_
 
 
-            for k_ in data:
-                data_[k_] = data[k_]
+    def append(self, spData):
+        ret_ = None
 
-#            pdb.set_trace()
+        if spData is not None:
+            digest_ = self.getDigest()
+            if digest_ is not None:
+                headers_ = self._headerForUpsert.copy()
+                headers_['X-RequestDigest'] = digest_['FormDigestValue']
+                data_ = spData
 
-            #
-            # request.post is turning the data object into get query params which is not
-            # what sharepoint is expecting. I found this out by using
-            #   req = Request('POST', url, data=data, headers=headers)
-            #   prepped = req.prepare()
-            # so this is why I am using json.dumps - don@hautsch.com
+                if '__metadata' not in data_ and self.getListItemEntityTypeFullName() is not None:
+                        data_ = data_.copy()
+                        data_['__metadata'] = { 'type': self._ListItemEntityTypeFullName }
 
-            data_ =  json.dumps(data_)
+                response_ = self.getSession().post(self._spListItems, auth = self.getHttpAuth(), headers = headers_, data = json.dumps(data_))
 
-            response_ = self._session.request('MERGE', self._urls['sp_list_items'] + '({})'.format(spID)
-                                           , data = data_
-                                           , auth = self._httpAuth
-                                           , headers = headers_)
-            if int(response_.status_code/100) == 2:
-                ret_ = dict(data)
-                ret_['ID'] = spID
+                if response_.status_code == 201:
+                    o_ = response_.json()
+                    ret_ = o_['d']
 
         return ret_

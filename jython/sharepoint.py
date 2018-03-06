@@ -1,6 +1,11 @@
-"""Class to interact with SharePoint List
+import time
+import json
+import requests
+from requests_ntlm import HttpNtlmAuth
 
-    SP = SharePoint('user@pass', 'http://sharepoint', 'Bogus')
+class SharePointList:
+    """Class to interact with SharePoint List
+    SP = SharePointList('user@pass', 'http://sharepoint', 'Bogus')
 
     listMeta_ = SP.getMeta()
     pp(listMeta_)
@@ -15,28 +20,19 @@
         for item_ in ret_:
             print('Second fetch ' + item_['Title'])
 
-#    ret_ = SP.merge({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'New_bogus-201803051650' }, 74)
-#    ret_ = SP.append({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'Updated---201803021650' })
+    ret_ = SP.merge({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'New_bogus-201803051650' }, 74)
+
+    ret_ = SP.append({ '__metadata': { 'type': listMeta_['ListItemEntityTypeFullName'] }, 'Title': 'Updated---201803021650' })
 
     ret_ = SP.merge( { 'Title': 'New_bogus-201803051650' }, 74)
-    pp(ret_)
     
     ret_ = SP.append({ 'Title': 'Updated---201803021650' })
-    pp(ret_)
 
     ret_ = SP.getItem(74)
-    pp(ret_)
 
     ret_ = SP.remove(73)
-    pp(ret_)
-"""
+    """
 
-import time
-import json
-import requests
-from requests_ntlm import HttpNtlmAuth
-
-class SharePoint(object):
     def __init__(self, connect, url, spList):
         self._digest = None
         self._ListItemEntityTypeFullName = None
@@ -137,6 +133,7 @@ class SharePoint(object):
 
         if spItemID is not None:
             digest_ = self.getDigest()
+
             if digest_ is not None:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']
@@ -153,7 +150,8 @@ class SharePoint(object):
         ret_ = None
 
         if self._ListItemEntityTypeFullName is None:
-            listMeta_ = SP.getMeta()
+            listMeta_ = self.getMeta()
+
             if listMeta_ is not None and 'ListItemEntityTypeFullName' in listMeta_:
                 self._ListItemEntityTypeFullName = listMeta_['ListItemEntityTypeFullName']
 
@@ -167,6 +165,7 @@ class SharePoint(object):
 
         if spData is not None and spItemID is not None:
             digest_ = self.getDigest()
+
             if digest_ is not None:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']
@@ -190,6 +189,7 @@ class SharePoint(object):
 
         if spData is not None:
             digest_ = self.getDigest()
+
             if digest_ is not None:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']

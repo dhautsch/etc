@@ -11,12 +11,12 @@ class SharePointList:
     pp(listMeta_)
 
     ret_ = SP.getItems()
-    if ret_ is not None:
+    if ret_:
         for item_ in ret_:
             print('First  fetch ' + item_['Title'])
 
     ret_ = SP.getItems({'$top': listMeta_['ItemCount']})
-    if ret_ is not None:
+    if ret_:
         for item_ in ret_:
             print('Second fetch ' + item_['Title'])
 
@@ -68,7 +68,7 @@ class SharePointList:
         return self._httpAuth
         
     def getDigest(self):
-        if self._digest is not None:
+        if self._digest:
             t_ = (int(time.time()) - self._digest['CreateTimeForDigest']) + 300
 
             if t_ > self._digest['FormDigestTimeoutSeconds']:
@@ -131,10 +131,10 @@ class SharePointList:
     def remove(self, spItemID):
         ret_ = None
 
-        if spItemID is not None:
+        if spItemID:
             digest_ = self.getDigest()
 
-            if digest_ is not None:
+            if digest_:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']
                 url_ = '{}%28{}%29'.format( self._spListItems, spItemID)
@@ -152,10 +152,10 @@ class SharePointList:
         if self._ListItemEntityTypeFullName is None:
             listMeta_ = self.getMeta()
 
-            if listMeta_ is not None and 'ListItemEntityTypeFullName' in listMeta_:
+            if listMeta_ and 'ListItemEntityTypeFullName' in listMeta_:
                 self._ListItemEntityTypeFullName = listMeta_['ListItemEntityTypeFullName']
 
-        if self._ListItemEntityTypeFullName is not None:
+        if self._ListItemEntityTypeFullName:
             ret_ = self._ListItemEntityTypeFullName
 
         return ret_
@@ -163,16 +163,16 @@ class SharePointList:
     def merge(self, spData, spItemID):
         ret_ = None
 
-        if spData is not None and spItemID is not None:
+        if spData and spItemID:
             digest_ = self.getDigest()
 
-            if digest_ is not None:
+            if digest_:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']
                 url_ = '{}%28{}%29'.format( self._spListItems, spItemID)
                 data_ = spData
 
-                if '__metadata' not in data_ and self.getListItemEntityTypeFullName() is not None:
+                if '__metadata' not in data_ and self.getListItemEntityTypeFullName():
                         data_ = data_.copy()
                         data_['__metadata'] = { 'type': self._ListItemEntityTypeFullName }
 
@@ -187,15 +187,15 @@ class SharePointList:
     def append(self, spData):
         ret_ = None
 
-        if spData is not None:
+        if spData:
             digest_ = self.getDigest()
 
-            if digest_ is not None:
+            if digest_:
                 headers_ = self._headerForUpsert.copy()
                 headers_['X-RequestDigest'] = digest_['FormDigestValue']
                 data_ = spData
 
-                if '__metadata' not in data_ and self.getListItemEntityTypeFullName() is not None:
+                if '__metadata' not in data_ and self.getListItemEntityTypeFullName():
                         data_ = data_.copy()
                         data_['__metadata'] = { 'type': self._ListItemEntityTypeFullName }
 

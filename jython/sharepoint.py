@@ -5,6 +5,7 @@ from requests_ntlm import HttpNtlmAuth
 
 class SharePointList:
     """Class to interact with SharePoint List
+
     SP = SharePointList('user@pass', 'http://sharepoint', 'Bogus')
 
     listMeta_ = SP.getMeta()

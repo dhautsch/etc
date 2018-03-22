@@ -2,8 +2,7 @@
 # Get citrix reciever from https://www.citrix.com/downloads/citrix-receiver/linux/
 # for rapberry pi get Debian Web Package for ARM HF
 #
-#
-# If you run into Root Cert issues the down load root certs from Verisign and extract
+# For 13.5 If you run into Root Cert issues the down load root certs from Verisign and extract
 #   VeriSign Root Certificates/Generation 5 (G5) PCA/VeriSign Class 3 Public Primary Certification Authority - G5.pem
 # and copy to
 #   /opt/Citrix/ICAClient/keystore/cacerts/VeriSign Class 3 Public Primary Certification Authority - G5.pem
@@ -15,11 +14,31 @@
 dpkg -l|grep -i citrix
 
 #
-# Remove old client
+# Remove old client and purge any remaining files
 #
-sudo apt-get remove icaclient
+sudo dpkg -r icaclient
+sudo dpkg -P icaclient
 
 #
-# Install client
+# Install new client
 #
 sudo dpkg -i icaclientWeb_13.8.0.10299729_armhf.deb
+
+#
+# Citrix started giving
+#  SSL error
+#  Contact your help desk with the following information:
+#  You have not chosen to trust "COMODO RSA Certification
+#  Authority", the issuer of the server's security certificate
+#  (SSL error 61)
+#
+To fix I downloaded
+        comodorsaaddtrustca.crt
+From
+        https://support.comodo.com/index.php?/Knowledgebase/Article/View/966/108/intermediate-1-sha-2-comodo-rsa-certification-authority
+And
+        comodorsacertificationauthority.crt
+From
+        https://support.comodo.com/index.php?/Knowledgebase/Article/View/969/108/root-comodo-rsa-certification-authority-sha-2
+Then copy these two files to
+        /opt/Citrix/ICAClient/keystore

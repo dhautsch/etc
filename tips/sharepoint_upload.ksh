@@ -158,6 +158,7 @@ curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
  "$CLOUD_SP/_api/contextinfo"
 
 DIGEST=$(perl -lane 'print "Authorization:Bearer $1" if m!<d:FormDigestValue[^>]*>(.*)</d:FormDigestValue!' $CURL_RESP)
+DIGEST_TIMEOUT=$(perl -lane 'print $1 if m!<d:FormDigestTimeoutSeconds[^>]*>(.*)</d:FormDigestTimeoutSeconds!' $CURL_RESP)
 
 if test -z "$DIGEST"
 then

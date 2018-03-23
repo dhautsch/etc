@@ -10,6 +10,7 @@ from requests_ntlm import HttpNtlmAuth
 
 class SharePointList(requests.Session):
     """Class to interact with SharePoint List
+    SAML stuff inspired by sharepy
 
     os.environ['HTTPS_PROXY'] = 'http://proxy' # set if using proxy
 

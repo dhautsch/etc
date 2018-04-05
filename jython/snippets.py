@@ -1,5 +1,27 @@
+from datetime import datetime
+from dateutil import tz
+
 os.environ['TZ'] = 'US/Eastern'
 time.tzset()
+
+def utcTS(dt = None):
+    if dt is None:
+        return datetime.utcnow().replace(microsecond=0).isoformat() + 'Z'
+    else:
+        return datetime.utcfromtimestamp(dt.timestamp()).replace(microsecond=0).isoformat() + 'Z'
+
+def utcTStoLocal(s, isoformat = False):
+    ret_ = ''
+
+    global PROPS
+
+    m_ = re.match('(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})Z', '' if s is None else s)
+    if m_:
+        utc_ = datetime.strptime(m_.group(1) + ' ' + m_.group(2), '%Y-%m-%d %H:%M:%S')
+        utc_ = utc_.replace(tzinfo=tz.tzutc())
+        ret_ = utc_.astimezone(tz.tzlocal()).isoformat() if isoformat else utc_.astimezone(PROPS['TZ_LOCAL']).ctime()
+
+    return ret_
 
 def toSeconds(s):
         ret_ = None

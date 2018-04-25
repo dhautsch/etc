@@ -10,7 +10,7 @@ import requests
 from requests_ntlm import HttpNtlmAuth
 
 class SharePointList(requests.Session):
-    """Class to interact with SharePoint List by don@hautsch.com
+    """Class to interact with SharePoint List
 
     os.environ['HTTPS_PROXY'] = 'http://proxy' # set if using proxy
 

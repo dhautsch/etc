@@ -10,8 +10,7 @@ import requests
 from requests_ntlm import HttpNtlmAuth
 
 class SharePointList(requests.Session):
-    """Class to interact with SharePoint List
-    SAML stuff inspired by sharepy
+    """Class to interact with SharePoint List by don@hautsch.com
 
     os.environ['HTTPS_PROXY'] = 'http://proxy' # set if using proxy
 
@@ -41,6 +40,10 @@ class SharePointList(requests.Session):
     ret_ = SP.getItem(ret_['ID'])
 
     ret_ = SP.remove(ret_['ID'])
+
+    SP2 = SP.clone() # clone the list getting the connection settings and saml cookies
+
+    listMeta_ = SP2.setSPList('Bogus2') # setup for new list
 
     The saml code for connecting to sharepoint.com was inspired by sharepy
     """
@@ -101,68 +104,104 @@ class SharePointList(requests.Session):
             SharePointList.REQUESTS_LOG.setLevel(logging.DEBUG)
             SharePointList.REQUESTS_LOG.propagate = True
 
-    def __init__(self, username, password, url, spList):
-        super().__init__()
+    def clone(self):
+        ret_ = SharePointList()
+        ret_._expire = self._expire
+        ret_._ListItemEntityTypeFullName = None
+        ret_._digest = self._digest
+        ret_._auth = self._auth
+        ret_._saml = self._saml
+        ret_._samlCookie = self._samlCookie
+        ret_._username = self._username
+        ret_._password = self._password
+        ret_._url = self._url
+        ret_._site = self._site
+        ret_._digestURL = self._digestURL
 
-        self._expire = datetime.now()
-        self._ListItemEntityTypeFullName = None
-        self._digest = None
-        self._auth = None
-        self._saml = None
-        self._samlCookie = None
-        self._username = username
-        self._password = password
-        self._spList = spList
-        self._url = url
-        self._site = re.sub(r"^https?://", "", url)
-        self._site = re.sub(r'(:\d+)*/.*', "", self._site)
-        self._digestURL = '{}/_api/contextinfo'.format( self._url )
-        self._spList = '{}/_api/lists/getByTitle%28%27{}%27%29'.format( self._url, self._spList)
+        for k_ in self.headers:
+            ret_.headers[k_] = self.headers[k_]
+
+        return ret_
+
+    def setSPList(self, spList):
+        self._spList = '{}/_api/lists/getByTitle%28%27{}%27%29'.format( self._url, spList)
         self._spListItems = self._spList + '/items'
 
-        # insert username and password into SAML request after escaping special characters
-        if re.search(r'sharepoint\.com', self._site):
-            self._saml = SharePointList.SAML.format(username=escape(self._username),
-                                                    password=escape(self._password),
-                                                    site=self._site)
+        self._ListItemEntityTypeFullName = None
+        listMeta_ = self.getMeta()
 
-            token_ = None
-            response_ = requests.post(SharePointList.MSOnline, data=self._saml)
-            try:
-                root_ = et.fromstring(response_.text)
-                token_ = root_.find(".//wsse:BinarySecurityToken", SharePointList.SAML_NS).text
-            except:
-                token_ = None
-                print("Token request failed at {}. Check your username and password.".format(SharePointList.MSOnline))
-
-            if token_:
-                # Request access token from sharepoint.com site
-                response_ = requests.post("https://" + self._site + "/_forms/default.aspx?wa=wsignin1.0",
-                                          data = token_, headers = { "Host" : self._site } )
-
-                # Create access cookie from returned headers
-                self._samlCookie = self._buildcookie(response_.cookies)
-                if self._samlCookie:
-                    self.headers.update( { "Cookie" : self._samlCookie } )
-        else:
-            # sharepoint is local
-            self._auth = HttpNtlmAuth(self._username, self._password, self)
-            if self._auth is None:
-                print("HttpNtlmAuth returned None")
-                self._session = None
-
-        if self._auth or self._samlCookie:
-            self.headers.update( { 'accept' : 'application/json;odata=verbose'
-                                 , 'content-type' : 'application/json;odata=verbose'
-                                 , 'IF-MATCH' : '*' } )
-            self._redigest()
-
-            listMeta_ = self.getMeta()
-            if listMeta_ and 'ListItemEntityTypeFullName' in listMeta_:
-                self._ListItemEntityTypeFullName = listMeta_['ListItemEntityTypeFullName']
-            
         if self._ListItemEntityTypeFullName:
+            return listMeta_
+        else:
+            print("setSPList FAILED")
+            sys.exit(1)
+        
+    def __init__(self, username = None, password = None, url = None, spList = None):
+        super().__init__()
+
+        if username is None and password is None and url is None and spList is None:
             pass
+        elif username and password and url and spList:
+            self._expire = datetime.now()
+            self._ListItemEntityTypeFullName = None
+            self._digest = None
+            self._auth = None
+            self._saml = None
+            self._samlCookie = None
+            self._username = username
+            self._password = password
+            self._spList = spList
+            self._url = url
+            self._site = re.sub(r"^https?://", "", url)
+            self._site = re.sub(r'(:\d+)*/.*', "", self._site)
+            self._digestURL = '{}/_api/contextinfo'.format( self._url )
+            self._spList = '{}/_api/lists/getByTitle%28%27{}%27%29'.format( self._url, self._spList)
+            self._spListItems = self._spList + '/items'
+
+            # insert username and password into SAML request after escaping special characters
+            if re.search(r'sharepoint\.com', self._site):
+                self._saml = SharePointList.SAML.format(username=escape(self._username),
+                                                        password=escape(self._password),
+                                                        site=self._site)
+
+                token_ = None
+                response_ = requests.post(SharePointList.MSOnline, data=self._saml)
+                try:
+                    root_ = et.fromstring(response_.text)
+                    token_ = root_.find(".//wsse:BinarySecurityToken", SharePointList.SAML_NS).text
+                except:
+                    token_ = None
+                    print("Token request failed at {}. Check your username and password.".format(SharePointList.MSOnline))
+
+                if token_:
+                    # Request access token from sharepoint.com site
+                    response_ = requests.post("https://" + self._site + "/_forms/default.aspx?wa=wsignin1.0",
+                                              data = token_, headers = { "Host" : self._site } )
+
+                    # Create access cookie from returned headers
+                    self._samlCookie = self._buildcookie(response_.cookies)
+                    if self._samlCookie:
+                        self.headers.update( { "Cookie" : self._samlCookie } )
+            else:
+                # sharepoint is local
+                self._auth = HttpNtlmAuth(self._username, self._password, self)
+                if self._auth is None:
+                    print("HttpNtlmAuth returned None")
+                    self._session = None
+
+            if self._auth or self._samlCookie:
+                self.headers.update( { 'accept' : 'application/json;odata=verbose'
+                                     , 'content-type' : 'application/json;odata=verbose'
+                                     , 'IF-MATCH' : '*' } )
+                self._redigest()
+
+                listMeta_ = self.getMeta()
+
+            if self._ListItemEntityTypeFullName:
+                pass
+            else:
+                print("CONSTRUCTOR FAILED")
+                sys.exit(1)
         else:
             print("CONSTRUCTOR FAILED")
             sys.exit(1)
@@ -233,6 +272,9 @@ class SharePointList(requests.Session):
             for s_ in ( 'Created', 'Description', 'Fields', 'Id', 'Items'
                         , 'LastItemDeletedDate', 'ListItemEntityTypeFullName'
                         , 'LastItemModifiedDate', 'ItemCount', 'Title' ):
+                if s_ == 'ListItemEntityTypeFullName':
+                    self._ListItemEntityTypeFullName = o_['d'][s_]
+
                 ret_[s_] = o_['d'][s_]
 
         return ret_

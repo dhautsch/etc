@@ -1,6 +1,9 @@
 Bash to forget history
 export HISTSIZE=0
 
+# do ten times
+for i in $(seq 10); do command; done
+
 getfacl file1 | setfacl --set-file=- file2
 
 # set putty terminal label in windows

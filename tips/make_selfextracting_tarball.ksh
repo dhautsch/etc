@@ -13,7 +13,7 @@ cat <<'HERE'
 #!/bin/ksh
 #
 # This is a self extracting tarball.
-# Chmod +x the file to list or extract - don@hautsch.com
+# Chmod +x the file to list or extract
 #
 
 if test -n "$DOIT"
@@ -35,7 +35,7 @@ then
         cat <<EOF
 
 #
-# This was a dry run, export DOIT to extract - don@hautsch.com
+# This was a dry run, export DOIT to extract
 #
 EOF
 

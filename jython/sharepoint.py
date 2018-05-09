@@ -267,15 +267,8 @@ class SharePointList(requests.Session):
 
         if response_.status_code == 200:
             o_ = response_.json()
-            ret_ = dict()
-
-            for s_ in ( 'Created', 'Description', 'Fields', 'Id', 'Items'
-                        , 'LastItemDeletedDate', 'ListItemEntityTypeFullName'
-                        , 'LastItemModifiedDate', 'ItemCount', 'Title' ):
-                if s_ == 'ListItemEntityTypeFullName':
-                    self._ListItemEntityTypeFullName = o_['d'][s_]
-
-                ret_[s_] = o_['d'][s_]
+            ret_ = o_['d']
+            self._ListItemEntityTypeFullName = ret_['ListItemEntityTypeFullName']
 
         return ret_
 

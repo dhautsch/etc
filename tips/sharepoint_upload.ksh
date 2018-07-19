@@ -1,50 +1,63 @@
 #!/usr/bin/ksh
-
-AD_USER='ADDOMAIN\puck'
-PASS=XXXX
-
-CLOUD_DOC_FOLDER="Shared%20Documents"
-SRC_FILE=$HOME/MSG/UPLOAD/hosts.txt
-
-CLOUD_SP=http://sharepoint/sites/top/subsite
-CLOUD_SP=https://bogus.sharepoint.com/sites/top/subsite
-
-if echo $CLOUD_SP|grep sharepoint.com > /dev/null
-then
-    CLOUD_USER='puck@domain.com'
-    export HTTPS_PROXY=https://zsproxy.fanniemae.com:9480
-else
-    true
-fi
-
 #
-# Set above variables for your site, file, etc.
+# Hack the AD_DOMAIN and CLOUD_USER variables if needed
 #
-# This script does both upload/download to create the download script
-#   ln -s upload_file.ksh download_file.ksh
-#
+#set -x
 
-TMP_DIR=$HOME/MSG/UPLOAD
-TMP_DIR=$HOME/tmp-$$-upload_file
+test -z "$XFER_SP_FILE_USER" && USAGE=t
+test -z "$XFER_SP_FILE_PASSWORD" && USAGE=t
+test "$#" != 2 && USAGE=t
 
-if test -d $TMP_DIR
+DOWNLOAD=$(echo $1|grep //)
+UPLOAD=$(echo $2|grep //)
+test -z "$DOWNLOAD" && test -z "$UPLOAD" && USAGE=t
+test -n "$DOWNLOAD" && test -n "$UPLOAD" && USAGE=t
+
+if test -n "$USAGE"
 then
-    true
-else
-    mkdir -p $TMP_DIR
-    trap "rm -rf $TMP_DIR" EXIT
-fi
-
-if cd $TMP_DIR
-then
-    true
-else
-    echo CD FAILED
+    echo Upload Usage   : $0 /etc/hosts  https://bogus.sharepoint.com/sites/aikido/ki-aikido/Shared%20Documents/hosts.txt
+    echo Download Usage : $0 https://bogus.sharepoint.com/sites/aikido/ki-aikido/Shared%20Documents/hosts.txt /tmp/hosts.txt
+    echo Env Var XFER_SP_FILE_USER should contain ldap user id
+    echo Env Var XFER_SP_FILE_PASSWORD should contain password
     exit 1
 fi
 
+if test -n "$DOWNLOAD"
+then
+    CLOUD_SP=$DOWNLOAD
+    FILE=$2
+else
+    CLOUD_SP=$UPLOAD
+    FILE=$1
+fi
+
+AD_DOMAIN=BOGUS
+AD_USER="$AD_DOMAIN\\$XFER_SP_FILE_USER"
+
+if echo $CLOUD_SP|grep sharepoint.com > /dev/null
+then
+    CLOUD_USER="$XFER_SP_FILE_USER@bogus.com"
+    export HTTPS_PROXY=https://proxy.bogus.com:8080
+else
+    true
+fi
+
+if test -n "$XFER_SP_FILE_VERBOSE"
+then
+    CURL_NOISE=-v
+else
+    CURL_NOISE=-s
+fi
+
+TMP_DIR=/tmp/tmp-$$-$(basename $0)
+mkdir -p $TMP_DIR || exit 1
+trap "rm -rf $TMP_DIR" EXIT
+
+cd $TMP_DIR || exit 1
+
 AUTH=--ntlm
 NETRC_FILE=$TMP_DIR/.netrc
+CURL=/usr/bin/curl
 
 touch $NETRC_FILE 
 chmod go-rwx $NETRC_FILE
@@ -52,20 +65,24 @@ chmod go-rwx $NETRC_FILE
 SITE=$(echo $CLOUD_SP | perl -p -e 's!^https*://!!;s!(:\d+)*/.*!!')
 
 cat > $NETRC_FILE <<EOF
-machine $SITE login $AD_USER password $PASS
+machine $SITE login $AD_USER password $XFER_SP_FILE_PASSWORD
 EOF
 
 export HOME=$TMP_DIR
 
-
 if echo $CLOUD_SP|grep sharepoint.com > /dev/null
 then
-    true
+    CLOUD_FILE=$(basename $CLOUD_SP)
+    CLOUD_SP=$(dirname $CLOUD_SP)
+    CLOUD_DOC_FOLDER=$(basename $CLOUD_SP)
+    CLOUD_SP=$(dirname $CLOUD_SP)
 else
-    case $(basename $0) in
-	upload_file.ksh)   exec curl -v -n $AUTH --upload-file $SRC_FILE $CLOUD_SP/$CLOUD_DOC_FOLDER/$(basename $SRC_FILE) ;;
-	download_file.ksh) exec curl -v -n $AUTH -o $SRC_FILE $CLOUD_SP/$CLOUD_DOC_FOLDER/$(basename $SRC_FILE) ;;
-    esac
+    if test -n "$UPLOAD"
+    then
+	exec $CURL $CURL_NOISE -n $AUTH --upload-file $FILE $CLOUD_SP
+    else
+	exec $CURL $CURL_NOISE -n $AUTH -o $FILE $CLOUD_SP
+    fi
 fi
 
 AUTH=--proxy-anyauth
@@ -93,7 +110,7 @@ cat > $SAML_FILE <<EOF
        xmlns:o='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'>
       <o:UsernameToken>
         <o:Username>$CLOUD_USER</o:Username>
-        <o:Password>$PASS</o:Password>
+        <o:Password>$XFER_SP_FILE_PASSWORD</o:Password>
       </o:UsernameToken>
     </o:Security>
   </s:Header>
@@ -112,7 +129,7 @@ cat > $SAML_FILE <<EOF
 </s:Envelope>
 EOF
 
-curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
+$CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
  -o $CURL_RESP \
  --data @$SAML_FILE \
  --ciphers AES256-SHA \
@@ -132,7 +149,7 @@ else
     exit 1
 fi
     
-curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
+$CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
  -o /dev/null \
  -c $COOKIE_FILE \
  --data @$SAML_FILE \
@@ -149,7 +166,7 @@ fi
 COOKIE1=$(perl -lane 'print "$1=$2" if m!(rtFa)\s+(\S+)!' $COOKIE_FILE)
 COOKIE2=$(perl -lane 'print "$1=$2" if m!(FedAuth)\s+(\S+)!' $COOKIE_FILE)
 
-curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
+$CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
  --data "''" \
  --ciphers AES256-SHA \
  -H "Cookie:$COOKIE1;$COOKIE2" \
@@ -166,26 +183,22 @@ then
     exit 1
 fi
 
-SRC_BNAME=$(basename $SRC_FILE)
-
-case $(basename $0) in
-    upload_file.ksh)
-	curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
-	     -H "Cookie:$COOKIE1;$COOKIE2" \
-	     -H "$DIGEST" \
-	     --ciphers AES256-SHA \
-	     --data-binary @$SRC_FILE \
-	     -o $CURL_RESP \
-	     "$CLOUD_SP/_api/web/getfolderbyserverrelativeurl('$CLOUD_DOC_FOLDER')/Files/Add(url='$SRC_BNAME',overwrite=true)"
+if test -n "$UPLOAD"
+then
+    $CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
+	 -H "Cookie:$COOKIE1;$COOKIE2" \
+	 -H "$DIGEST" \
+	 --ciphers AES256-SHA \
+	 --data-binary @$FILE \
+	 -o $CURL_RESP \
+	 "$CLOUD_SP/_api/web/getfolderbyserverrelativeurl('$CLOUD_DOC_FOLDER')/Files/Add(url='$CLOUD_FILE',overwrite=true)"
 
 	cat $CURL_RESP
-	;;
-    download_file.ksh)
-	curl -v --connect-timeout 10 --max-time 120 -n $AUTH \
+else
+	$CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
 	     -H "Cookie:$COOKIE1;$COOKIE2" \
 	     -H "$DIGEST" \
 	     --ciphers AES256-SHA \
-	     -o $SRC_FILE \
-	     "$CLOUD_SP/$CLOUD_DOC_FOLDER/$SRC_BNAME"
-	;;
-esac
+	     -o $FILE \
+	     "$CLOUD_SP/$CLOUD_DOC_FOLDER/$CLOUD_FILE"
+fi    

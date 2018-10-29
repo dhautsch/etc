@@ -97,3 +97,14 @@ path=${datapath%/*}
 
 i=$((i+1))
     often used in while loops 
+
+# Linux date arithmetic
+date -u -d "-100 minutes" +%FT%TZ
+date -d -30days
+date -d +30days
+date -d +2months
+date -d +2months17days
+date -d tomorrow+10days
+date -d yesterday-10days
+date -d '2010-01-21 + 2 weeks 3 days'
+date -d 'next tuesday + 1 day'

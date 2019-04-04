@@ -23,7 +23,7 @@ my $port = shift;
 defined($port) or die "Usage: $0 portno\n";
 
 #my $DOCUMENT_ROOT = $ENV{'HOME'} . "/public_html";
-my $DOCUMENT_ROOT = '/appl/bk1devl/tmp-3e1127d7-a040-2881-e429-231b7154add3';
+my $DOCUMENT_ROOT = '/appl/yoyodyne/tmp-3e1127d7-a040-2881-e429-231b7154add3';
 
 my $server = new IO::Socket::INET(Proto => 'tcp',
                                   LocalPort => $port,

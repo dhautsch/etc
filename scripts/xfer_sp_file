@@ -94,11 +94,11 @@ AUTH=--proxy-anyauth
 COOKIE_FILE=$TMP_DIR/Cookies.txt
 CURL_DGST_RESP=$TMP_DIR/CurlDigestResponse.txt
 CURL_SAML_RESP=$TMP_DIR/CurlSAMLResponse.txt
-CURL_ACT_RESP=$TMP_DIR/CurlActionResponse.txt
+CURL_RESP=$TMP_DIR/CurlResponse.txt
 SAML_FILE=$TMP_DIR/SAML.dat
 FORM_FILE=$TMP_DIR/FORM.dat
 
-for p in $COOKIE_FILE $CURL_DGST_RESP $CURL_SAML_RESP $CURL_ACT_RESP $SAML_FILE $FORM_FILE
+for p in $COOKIE_FILE $CURL_DGST_RESP $CURL_SAML_RESP $CURL_RESP $SAML_FILE $FORM_FILE
 do
     touch $p
     chmod go-rwx $p
@@ -198,10 +198,10 @@ then
 	 -H "$DIGEST" \
 	 --ciphers AES256-SHA \
 	 --data-binary @$FILE \
-	 -o $CURL_ACT_RESP \
+	 -o $CURL_RESP \
 	 "$CLOUD_SP/_api/web/getfolderbyserverrelativeurl('$CLOUD_DOC_FOLDER')/Files/Add(url='$CLOUD_FILE',overwrite=true)"
 
-	cat $CURL_ACT_RESP
+	cat $CURL_RESP
 else
 	$CURL $CURL_NOISE --connect-timeout 10 --max-time 120 -n $AUTH \
 	     -H "Cookie:$COOKIE1;$COOKIE2" \

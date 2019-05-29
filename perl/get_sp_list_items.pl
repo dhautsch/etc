@@ -22,7 +22,7 @@ my $VAR1;
 
 END { qx(/bin/rm -rf $TMP_DIR) if -d $TMP_DIR && ! ( $OPTS{keeptmp} || $OPTS{usetmp} ); exit($EXIT) };
 
-$OPTS{help}++ unless GetOptions(\%OPTS, qw(usetmp=s keeptmp help xml json digest create update delete getuserbyid data=s id=i meta verbose query=s example));
+$OPTS{help}++ unless GetOptions(\%OPTS, qw(usetmp=s keeptmp help xml json digest create update delete versions getuserbyid data=s id=i meta verbose query=s example));
 
 if ($OPTS{example}) {
     while (<DATA>) {
@@ -34,7 +34,7 @@ if ($OPTS{example}) {
 unless ($OPTS{help}) {
     my $i_ = 0;
 
-    foreach my $opt_ (qw(digest meta create update delete getuserbyid)) {
+    foreach my $opt_ (qw(digest meta create update delete versions getuserbyid)) {
         $i_++ if $OPTS{$opt_};
     }
 
@@ -59,6 +59,12 @@ unless ($OPTS{help}) {
         $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{delete}) {
+        $OPTS{help}++ unless $OPTS{id};
+        $OPTS{help}++ if $OPTS{data};
+        $OPTS{help}++ if $OPTS{query};
+        $OPTS{help}++ unless scalar(@ARGV) == 2;
+    }
+    elsif ($OPTS{versions}) {
         $OPTS{help}++ unless $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
@@ -95,6 +101,7 @@ if ($OPTS{help}) {
     print STDERR "\t$0 [-verbose -xml|-json] -create -data <DATA> <URL> <LIST_TITLE>\n";
     print STDERR "\t$0 [-verbose -xml|-json] -update -id <ID> -data <DATA> <URL> <LIST_TITLE>\n";
     print STDERR "\t$0 [-verbose -xml|-json] -delete -id <ID> <URL> <LIST_TITLE>\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -versions -id <ID> <URL> <LIST_TITLE>\n";
     print STDERR "\t$0 [-verbose] -digest <URL> : get digest.\n";
     print STDERR "\t$0 [-verbose] -getuserbyid -id <ID> <URL> : get user.\n";
     print STDERR "\t-verbose : print curl output to STDERR.\n";
@@ -124,6 +131,9 @@ my $URL = swizzleForHTTP($ARGV[0]);
 
 if ($OPTS{getuserbyid}) {
     $URL .= swizzleForHTTP("/_api/web/GetUserById($OPTS{id})");
+}
+elsif ($OPTS{versions}) {
+    $URL .= swizzleForHTTP("/_api/web/Lists/getbytitle('$ARGV[1]')/items($OPTS{id})/versions");
 }
 else {
     $URL .= swizzleForHTTP("/_api/lists/getByTitle('$ARGV[1]')");
@@ -663,42 +673,42 @@ sub swizzleForHTTP {
 
 __DATA__
 #
-# Following is example code - don@hautsch.com
+# Following is example code
 #
 
 get_sp_list_items.pl \
         -create -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" | \
         get_sp_list_items.pl -create -data @- \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 get_sp_list_items.pl \
         -create -data "@create_data.txt" \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 get_sp_list_items.pl \
         -update -id $ID -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" | \
         get_sp_list_items.pl -update -id $ID -data @- \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 get_sp_list_items.pl \
         -update -id $ID -data "@update_data.txt" \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
 get_sp_list_items.pl \
         -delete -id $ID \
-        http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+        http://sharepoint/sites/etl Bogus
 
-get_sp_list_items.pl -meta http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+get_sp_list_items.pl -meta http://sharepoint/sites/etl Bogus
 
-get_sp_list_items.pl http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+get_sp_list_items.pl http://sharepoint/sites/etl Bogus
 
-get_sp_list_items.pl -query '$top=5' http://sharepoint/eso-sites/etlinfraeng/etl Bogus
+get_sp_list_items.pl -query '$top=5' http://sharepoint/sites/etl Bogus
 
 #!/usr/bin/python
 #
@@ -712,7 +722,7 @@ import json
 
 CMD = os.getenv("HOME") + "/etlsupp/bin/get_sp_list_items.pl"
 SP_LIST = "Our_Servers"
-URL = "http://sharepoint/eso-sites/etlinfraeng/etl"
+URL = "http://sharepoint/sites/etl"
 
 PROCESS = subprocess.Popen([CMD, "-json", "-meta", URL, SP_LIST], stdout=subprocess.PIPE)
 OUTPUT, UNUSED_ERR = PROCESS.communicate()
@@ -745,7 +755,7 @@ if RET_CODE == 0 :
 use strict;
 my $CMD = "$ENV{HOME}/etlsupp/bin/get_sp_list_items.pl";
 my $SP_LIST = "Our_Servers";
-my $URL = "http://sharepoint/eso-sites/etlinfraeng/etl";
+my $URL = "http://sharepoint/sites/etl";
 my $VAR1 = qx($CMD -meta $URL $SP_LIST);
 my $TOP = '$top=';
 

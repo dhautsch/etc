@@ -1,4 +1,6 @@
-#!/usr/bin/ksh -x
+#!/bin/bash
+
+test -n "SET_MINUSX" && set -x
 
 TMP_DIR=$HOME/tmp-$$-$(date +%Y%m%d%H%M%S)
 URL=http://sharepoint/oursite

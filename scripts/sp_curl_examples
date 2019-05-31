@@ -172,7 +172,7 @@ fi
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \
@@ -197,7 +197,7 @@ source $DOT_FILE
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \
@@ -226,7 +226,7 @@ source $DOT_FILE
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \
@@ -247,7 +247,7 @@ egrep '^HTTP' $CURL_HDR | sed -e "s/^/Update item $id /"
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \
@@ -270,7 +270,7 @@ fi
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \
@@ -289,7 +289,7 @@ egrep '^HTTP' $CURL_HDR | sed -e "s/^/Delete item $Id /"
 cp /dev/null $CURL_HDR
 cp /dev/null $CURL_RESP
 
-/usr/bin/curl -s --max-time 30 -n $AUTH \
+$CURL -s --max-time 30 -n $AUTH \
  --dump-header $CURL_HDR     \
  --ciphers AES256-SHA \
  -H 'accept:application/atom+xml;charset=utf-8' \

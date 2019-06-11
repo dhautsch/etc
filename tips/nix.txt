@@ -98,6 +98,9 @@ path=${datapath%/*}
 i=$((i+1))
     often used in while loops 
 
+# find world writable
+find . -perm /002 -not -type l
+
 # Linux date arithmetic
 date -u -d "-100 minutes" +%FT%TZ
 date -d -30days

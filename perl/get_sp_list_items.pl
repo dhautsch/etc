@@ -3,13 +3,19 @@
 use Getopt::Long;
 use Data::Dumper;
 use File::Basename;
+use sigtrap qw/handler normal_signal_handler normal-signals/;
+use FindBin;
+use lib "$FindBin::Bin/lib/perl";
+use JSON;
 use strict;
 
 my %PROPS;
+my $WHOAMI = qx(whoami); chomp $WHOAMI;
 my $SHAREPOINT_CONN_PROP = 'sharepoint_conn';
+my $SHAREPOINT_URL_PROP = 'sharepoint.url';
 my $PROXY_PROP = 'proxy.url';
+my $PROXY_AUTH_REQ_PROP = 'proxy.auth.required';
 my $TRAILING_WS = '\s*$';
-my $SHAREPOINT_HOST;
 my $SCRIPT_DIR = dirname($0); $SCRIPT_DIR = qx(cd $SCRIPT_DIR && pwd); chomp $SCRIPT_DIR;
 my $TMP_DIR;
 my $GET_LIST_RESPONSE;
@@ -17,25 +23,47 @@ my $GET_DIGEST_RESPONSE;
 my $CURL_OUT;
 my $CURL_CNT = 0;
 my %OPTS;
+my $DECRYPT = "$SCRIPT_DIR/decrypt";
+my $SP_DIGEST = "/tmp/$WHOAMI-sp_digest.json";
+my @DIGEST_KEYS = qw(
+    SHAREPOINT_CONN_COOKIE
+    SHAREPOINT_CONN_EXPIRES
+    SHAREPOINT_CONN_ENCRYPTED
+    SHAREPOINT_CONN_FORM_DIGEST_VALUE
+    SHAREPOINT_CONN_FORM_DIGEST_TIMEOUT
+    SHAREPOINT_HOST
+    SHAREPOINT_PROXY_SITE
+    SHAREPOINT_SITE
+    );
+my $DIGEST_KEYS_PAT = join('|', @DIGEST_KEYS);
+my $SP_DIGEST_OBJ;
+my $DEBUG_SP_LI;
+my @CONFIG_FILES = ( "$SCRIPT_DIR/config.properties" , "$ENV{HOME}/MPSTAT/config.properties", "$ENV{HOME}/etlsupp/config.properties" );
+my $TIME = time;
 my $EXIT = 1;
 my $VAR1;
 
-END { qx(/bin/rm -rf $TMP_DIR) if -d $TMP_DIR && ! ( $OPTS{keeptmp} || $OPTS{usetmp} ); exit($EXIT) };
+sub normal_signal_handler { qx(/bin/rm -rf $TMP_DIR) if -d $TMP_DIR && ! ( $OPTS{keeptmp} || $OPTS{usetmp} ) };
+
+END { normal_signal_handler(); exit($EXIT) };
 
 $OPTS{help}++ unless GetOptions(\%OPTS, qw(usetmp=s keeptmp help xml json digest create update delete versions getuserbyid data=s id=i meta verbose query=s example));
-
-if ($OPTS{example}) {
-    while (<DATA>) {
-        print;
-    }
-    exit($EXIT);
-}
 
 unless ($OPTS{help}) {
     my $i_ = 0;
 
+    if ($OPTS{example}) {
+	while (<DATA>) {
+	    print;
+	}
+	exit($EXIT = 0);
+    }
+
     foreach my $opt_ (qw(digest meta create update delete versions getuserbyid)) {
         $i_++ if $OPTS{$opt_};
+    }
+
+    unless ($OPTS{help} || $i_ > 1) {
     }
 
     if ($i_ > 1) {
@@ -44,37 +72,31 @@ unless ($OPTS{help}) {
     elsif ($i_ < 1) { # get list items
         $OPTS{help}++ if $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{create}) {
         $OPTS{help}++ if $OPTS{id};
         $OPTS{help}++ unless $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{update}) {
         $OPTS{help}++ unless $OPTS{id};
         $OPTS{help}++ unless $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{delete}) {
         $OPTS{help}++ unless $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{versions}) {
         $OPTS{help}++ unless $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{meta}) {
         $OPTS{help}++ if $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 2;
     }
     elsif ($OPTS{digest}) {
         $OPTS{help}++ if $OPTS{id};
@@ -82,26 +104,106 @@ unless ($OPTS{help}) {
         $OPTS{help}++ if $OPTS{query};
         $OPTS{help}++ if $OPTS{json};
         $OPTS{help}++ if $OPTS{xml};
-        $OPTS{help}++ unless scalar(@ARGV) == 1;
     }
     elsif ($OPTS{getuserbyid}) {
         $OPTS{help}++ unless $OPTS{id};
         $OPTS{help}++ if $OPTS{data};
         $OPTS{help}++ if $OPTS{query};
-        $OPTS{help}++ unless scalar(@ARGV) == 1;
     }
+
+    unless ($OPTS{help}) {
+        unshift @CONFIG_FILES, $ENV{CONFIG_PROPS} if $ENV{CONFIG_PROPS};
+
+	foreach my $config_ (@CONFIG_FILES) {
+	    if (open(CFG, $config_)) {
+		while (<CFG>) {
+		    if (m!^($SHAREPOINT_CONN_PROP)=(\S+)!) {
+			$PROPS{SHAREPOINT_CONN_ENCRYPTED} = $2;
+		    }
+		    elsif (m!^($SHAREPOINT_URL_PROP)=(\S+)!) {
+			$PROPS{SHAREPOINT_SITE} = $2;
+		    }
+		    elsif (m!^($PROXY_PROP)=(\S+)!) {
+			$PROPS{SHAREPOINT_PROXY_SITE} = $2;
+		    }
+		    elsif (m!^($PROXY_AUTH_REQ_PROP)=(\S+)!) {
+			$PROPS{SHAREPOINT_PROXY_AUTH_REQ} = $2;
+		    }
+		}
+		close CFG;
+
+		last;
+	    }
+	}
+
+	if (-r $SP_DIGEST) {
+	    my $json_;
+	    $json_ = qx(cat $SP_DIGEST);
+	    $VAR1 = JSON->new->allow_nonref->decode($json_);
+	
+	    if ($VAR1->{SHAREPOINT_CONN_FORM_DIGEST_TIMEOUT} > $TIME) {
+		$VAR1->{COMMENT} = "REUSED $SP_DIGEST " . scalar(qx(ls -l $SP_DIGEST));
+
+		foreach (keys %$VAR1) {
+		    $PROPS{$_} = $VAR1->{$_} if $VAR1->{$_} && m!^($DIGEST_KEYS_PAT)!;
+		}
+
+		$SP_DIGEST_OBJ = $VAR1;
+	    }
+	}
+
+    }
+
+    foreach (qw(SHAREPOINT_SITE)) {
+	if ($OPTS{digest} || $OPTS{getuserbyid}) {
+	    if (scalar(@ARGV) == 1) {
+		$ENV{$_} = $ARGV[0];
+	    }
+	    elsif (scalar(@ARGV) == 0) {
+		$ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	    }
+	    else {
+		$OPTS{help}++;
+	    }
+	}
+	elsif (scalar(@ARGV) == 2) {
+	    $ENV{$_} = $ARGV[1];
+	}
+	elsif (scalar(@ARGV) == 1) {
+	    $ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	}
+	else {
+	    $OPTS{help}++;
+	}
+
+	if ($ENV{$_} =~ m!https*://([^:/]+)!) {
+	    $ENV{SHAREPOINT_HOST} = $1;
+	}
+	else {
+	    print STDERR "FAIL - CANNOT DETERMINE $_\n";
+	    $OPTS{help}++;
+	}
+
+    }
+
+    unless ($OPTS{help}) {
+	foreach (@DIGEST_KEYS) {
+	    $ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	}
+    }
+
 }
 
 if ($OPTS{help}) {
     print STDERR "Usage :\n";
     print STDERR "\t$0 -help : print this message.\n";
     print STDERR "\t$0 -example : show example code.\n";
-    print STDERR "\t$0 [-verbose -xml|-json] -meta <URL> <LIST_TITLE> : get list metadata instead of items.\n";
-    print STDERR "\t$0 [-verbose -xml|-json  -query <QUERY>] <URL> <LIST_TITLE> : get list items.\n";
-    print STDERR "\t$0 [-verbose -xml|-json] -create -data <DATA> <URL> <LIST_TITLE>\n";
-    print STDERR "\t$0 [-verbose -xml|-json] -update -id <ID> -data <DATA> <URL> <LIST_TITLE>\n";
-    print STDERR "\t$0 [-verbose -xml|-json] -delete -id <ID> <URL> <LIST_TITLE>\n";
-    print STDERR "\t$0 [-verbose -xml|-json] -versions -id <ID> <URL> <LIST_TITLE>\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -meta <LIST_TITLE> [<SP_SITE>]: get list metadata instead of items.\n";
+    print STDERR "\t$0 [-verbose -xml|-json  -query <QUERY>] <LIST_TITLE> [<SP_SITE>] : get list items.\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -create -data <DATA> <LIST_TITLE> [<SP_SITE>]\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -update -id <ID> -data <DATA> <LIST_TITLE> [<SP_SITE>]\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -delete -id <ID> <LIST_TITLE> [<SP_SITE>]\n";
+    print STDERR "\t$0 [-verbose -xml|-json] -versions -id <ID> <LIST_TITLE> [<SP_SITE>]\n";
     print STDERR "\t$0 [-verbose] -digest <URL> : get digest.\n";
     print STDERR "\t$0 [-verbose] -getuserbyid -id <ID> <URL> : get user.\n";
     print STDERR "\t-verbose : print curl output to STDERR.\n";
@@ -113,30 +215,55 @@ if ($OPTS{help}) {
     print STDERR "\t\tIf using a file then supply the \@path, that is a @\n";
     print STDERR "\t\tbefore the filename. See curl man page.\n";
     print STDERR "\t-id <ID> : Integer required for -delete -update and -getuserbyid.\n";
+    print STDERR "\t<SP_SITE> : Optional if ENV{SHAREPOINT_SITE} set.\n";
     exit($EXIT);
 }
 
-$TMP_DIR = $OPTS{usetmp} || sprintf("$ENV{HOME}/tmp-%d-%d-%s", time, $$, basename($0));
+$TMP_DIR = $OPTS{usetmp} || sprintf("/tmp/%d-%d-%s", time, $$, $WHOAMI);
 $GET_LIST_RESPONSE = "$TMP_DIR/GetListResponse.txt";
 $GET_DIGEST_RESPONSE = "$TMP_DIR/GetDigestResponse.txt";
+
+$DEBUG_SP_LI = JSON->new->allow_nonref->decode($ENV{DEBUG_SP_LI}) if $ENV{DEBUG_SP_LI};
 
 $Data::Dumper::Sortkeys++;
 
 if ($OPTS{digest}) {
+    if ($SP_DIGEST_OBJ) {
+	print Dumper($SP_DIGEST_OBJ);
+	exit($EXIT = 0);
+    }
+
+    unlink ($SP_DIGEST);
+
     delete $ENV{SHAREPOINT_CONN_COOKIE};
-    delete $ENV{SHAREPOINT_CONN_FORM_DIGEST};
+    delete $ENV{SHAREPOINT_CONN_FORM_DIGEST_VALUE};
+}
+else {
+    $VAR1 = qx($0 -digest $ENV{SHAREPOINT_SITE});
+    eval $VAR1;
+
+    if ($VAR1) {
+	foreach (@DIGEST_KEYS) {
+	    $ENV{$_} = $VAR1->{$_} if $VAR1->{$_} && ! $ENV{$_};
+	}
+
+	if ($DEBUG_SP_LI) {
+	    print STDERR "#\n# Dumping MAPS\n#\n";
+	    print Dumper({ ENV => \%ENV, DIGEST => $VAR1, OPTS => \%OPTS, PROPS => \%PROPS });
+	}
+    }
 }
 
-my $URL = swizzleForHTTP($ARGV[0]);
+my $URL = swizzleForHTTP($ENV{SHAREPOINT_SITE});
 
 if ($OPTS{getuserbyid}) {
     $URL .= swizzleForHTTP("/_api/web/GetUserById($OPTS{id})");
 }
 elsif ($OPTS{versions}) {
-    $URL .= swizzleForHTTP("/_api/web/Lists/getbytitle('$ARGV[1]')/items($OPTS{id})/versions");
+    $URL .= swizzleForHTTP("/_api/web/Lists/getbytitle('$ARGV[0]')/items($OPTS{id})/versions");
 }
 else {
-    $URL .= swizzleForHTTP("/_api/lists/getByTitle('$ARGV[1]')");
+    $URL .= swizzleForHTTP("/_api/lists/getByTitle('$ARGV[0]')");
     $URL .= "/items" unless $OPTS{meta};
     $URL .= swizzleForHTTP("($OPTS{id})") if $OPTS{id};
     $URL .= '?' if $OPTS{query};
@@ -147,97 +274,52 @@ $OPTS{request} = 'POST' if $OPTS{create};
 $OPTS{request} = 'MERGE' if $OPTS{update};
 $OPTS{request} = 'DELETE' if $OPTS{delete};
 
-if ($URL =~ m!https*://([^:/]+)!) {
-        $SHAREPOINT_HOST = $1;
+unless ($OPTS{usetmp}) {
+    mkdir($TMP_DIR) or die "mkdir $TMP_DIR : $!";
+    chmod(0700, $TMP_DIR) or die "chmod $TMP_DIR : $!";
 }
-else {
-    print STDERR "Cannot determine sharepoint host !!\n";
-    exit($EXIT);
-}
-
-unless ($ENV{SHAREPOINT_CONN} && $ENV{SHAREPOINT_PROXY}) {
-    if (open(CFG, $ENV{CONFIG_PROPS} || "$ENV{HOME}/etlsupp/config.properties")) {
-        while (<CFG>) {
-            if (m!^($SHAREPOINT_CONN_PROP|$PROXY_PROP)=(\S+)!) {
-                $PROPS{$1} = $2;
-            }
-
-            last if scalar(keys %PROPS) == 2;
-        }
-        close CFG;
-        
-        if (scalar(keys %PROPS) != 2) {
-            print STDERR "CANNOT FIND PROPS IN CFG!!\n";
-            exit($EXIT);
-        }
-    }
-    else {
-        print STDERR "CANNOT OPEN CFG!!\n";
-        exit($EXIT);
-    }
-}
-
-$PROPS{$PROXY_PROP} = $ENV{SHAREPOINT_PROXY} if $ENV{SHAREPOINT_PROXY};
-
-if ($ENV{SHAREPOINT_CONN}) {
-    $PROPS{$SHAREPOINT_CONN_PROP} = $ENV{SHAREPOINT_CONN};
-}
-else {
-    $PROPS{$SHAREPOINT_CONN_PROP} = qx($ENV{HOME}/etlsupp/bin/decrypt $PROPS{$SHAREPOINT_CONN_PROP});
-}
-
-if ($PROPS{$SHAREPOINT_CONN_PROP} =~ m!^(\w+)\\(\w+)\@(\S+)!) {
-    $ENV{SP_USER} = $2 . '@' . lc($1) . '.com';
-    $ENV{SP_PASS} = $3;
-}
-else {
-    print STDERR "FORMAT $SHAREPOINT_CONN_PROP EXPECTING DOMAIN\\USER\@PASS !!\n";
-    exit($EXIT);
-}
-
-unless ($PROPS{$SHAREPOINT_CONN_PROP}) {
-    print STDERR "CANNOT DECRYPT PW!!\n";
-    exit($EXIT);
-}
-
-if ($URL =~ m!sharepoint\.com!) {
-    unless ($PROPS{$PROXY_PROP}) {
-        print STDERR "$PROXY_PROP NOT SET!!\n";
-        exit($EXIT);
-    }
-}
-
-$PROPS{CURL_MAX_TIME} = 30;
-$PROPS{NTLM} = '--ntlm';
-
-qx(mkdir -p $TMP_DIR) unless $OPTS{usetmp};
 
 chdir($TMP_DIR) or die "chdir $TMP_DIR : $!";
 
-writeNETRC();
+$PROPS{NTLM} = "--max-time 30";
+if ($URL =~ m!sharepoint\.com!) {
+    if ($ENV{SHAREPOINT_PROXY_AUTH_REQ}) {
+	$PROPS{NTLM} .= ' -n --proxy-anyauth';
+	writeNETRC();
+    }
+}
+else {
+    $PROPS{NTLM} .= ' -n --ntlm';
+    writeNETRC();
+}
 
 if ($URL =~ m!sharepoint\.com!) {
-    $PROPS{NTLM} = '--proxy-anyauth';
-
     map { delete $ENV{$_} } qw(HTTPS_PROXY HTTP_PROXY);
 
-    if ($PROPS{$PROXY_PROP} =~ m!https!) {
-        $ENV{HTTPS_PROXY} = $PROPS{$PROXY_PROP};
+    if ($ENV{SHAREPOINT_PROXY_SITE} =~ m!https!) {
+        $ENV{HTTPS_PROXY} = $ENV{SHAREPOINT_PROXY_SITE};
     }
-    else {
-        $ENV{HTTP_PROXY} = $PROPS{$PROXY_PROP};
+    elsif ($ENV{SHAREPOINT_PROXY_SITE})  {
+        $ENV{HTTP_PROXY} = $ENV{SHAREPOINT_PROXY_SITE};
     }
 
-    if ($ENV{SHAREPOINT_CONN_COOKIE}) {
-        $PROPS{Cookie} = $ENV{SHAREPOINT_CONN_COOKIE};
-    }
-    else {
+    unless ($ENV{SHAREPOINT_CONN_COOKIE}) {
         my $samlData_ = "$TMP_DIR/SAML.dat";
 
-        writeSAMLData(data => $samlData_
-                      , site => $SHAREPOINT_HOST
-                      , username => $ENV{SP_USER}
-                      , password => swizzleXML($ENV{SP_PASS}));
+	decryptConnStr();
+
+	foreach (qw(SHAREPOINT_CONN_DECRYPTED)) {
+	    if ($ENV{$_} =~ m!^(\w+)\\(\w+)\@(\S+)!) {
+		writeSAMLData(data => $samlData_
+			      , site => $ENV{SHAREPOINT_HOST}
+			      , username => $2 . '@' . lc($1) . '.com'
+			      , password => swizzleXML($3));
+	    }
+	    else {
+		print STDERR "FORMAT $_ EXPECTING DOMAIN\\USER\@PASS !!\n";
+		exit($EXIT);
+	    }
+	}
 
         my $samlResp_ = "$TMP_DIR/GetSAMLResponse.txt";
 
@@ -248,6 +330,8 @@ if ($URL =~ m!sharepoint\.com!) {
                          , url => 'https://login.microsoftonline.com/extSTS.srf');
         
         $samlResp_ = qx(cat $samlResp_);
+
+	print STDERR "#\n# Getting SAML response\n#\n" if $DEBUG_SP_LI;
 
         if ($samlResp_ =~ m!<wst:RequestSecurityTokenResponse[^>]*>(.*)</wst:RequestSecurityTokenResponse>!) {
             my $reqSecTokenResp_ = $1;
@@ -261,7 +345,7 @@ if ($URL =~ m!sharepoint\.com!) {
             }
 
             if ($reqSecTokenResp_ =~ m!<wsu:Expires[^>]*>(.*)</wsu:Expires!) {
-                $PROPS{CookieExpires} = deswizzleXML($1);
+                $ENV{SHAREPOINT_CONN_EXPIRES} = deswizzleXML($1);
             }
             else {
                 saveError("UNABLE TO GET wsu:Expires !!");
@@ -280,8 +364,10 @@ if ($URL =~ m!sharepoint\.com!) {
                              , cipher => 'AES256-SHA'
                              , resp_file => '/dev/null'
                              , cookies => $cookies_{file}
-                             , header => { HOST =>  $SHAREPOINT_HOST }
-                             , url => "-L https://$SHAREPOINT_HOST/_forms/default.aspx?wa=wsignin1.0");
+                             , header => { HOST =>  $ENV{SHAREPOINT_HOST} }
+                             , url => "-L https://$ENV{SHAREPOINT_HOST}/_forms/default.aspx?wa=wsignin1.0");
+
+	    print STDERR "#\n# Getting FED cookies\n#\n" if $DEBUG_SP_LI;
 
             foreach (qx(cat $cookies_{file})) {
                 chomp;
@@ -295,50 +381,53 @@ if ($URL =~ m!sharepoint\.com!) {
                 }
             }
 
-            $PROPS{Cookie} = "rtFa=$cookies_{rtFa};FedAuth=$cookies_{FedAuth}" if $PROPS{NTLM};
+            $ENV{SHAREPOINT_CONN_COOKIE} = "rtFa=$cookies_{rtFa};FedAuth=$cookies_{FedAuth}" if $PROPS{NTLM};
         }
     }
 }
 
 if ($PROPS{NTLM}) {
-    if ($ENV{SHAREPOINT_CONN_FORM_DIGEST}) {
-        $PROPS{FormDigestValue} = $ENV{SHAREPOINT_CONN_FORM_DIGEST};
-    }
-    else {
+    unless ($ENV{SHAREPOINT_CONN_FORM_DIGEST_VALUE}) {
         my %h_;
 
-        if ($PROPS{Cookie}) {
+        if ($ENV{SHAREPOINT_CONN_COOKIE}) {
             %h_ = (data => "''"
                    , cipher => 'AES256-SHA'
                    , resp_file => $GET_DIGEST_RESPONSE
-                   , header => { accept => 'application/atom+xml;charset=utf-8', Cookie => $PROPS{Cookie} }
-                   , url => swizzleForHTTP($ARGV[0] . '/_api/contextinfo')
+                   , header => { accept => 'application/atom+xml;charset=utf-8', Cookie => $ENV{SHAREPOINT_CONN_COOKIE} }
+                   , url => swizzleForHTTP("$ENV{SHAREPOINT_SITE}/_api/contextinfo")
                 );
         }
         else {
             %h_ = (data => '{}'
                    , resp_file => $GET_DIGEST_RESPONSE
                    , header => { qw(accept application/atom+xml;charset=utf-8) }
-                   , url => swizzleForHTTP($ARGV[0] . '/_api/contextinfo')
+                   , url => swizzleForHTTP("$ENV{SHAREPOINT_SITE}/_api/contextinfo")
                 );
         }
 
         $CURL_OUT = curl(%h_);
+
+	print STDERR "#\n# Getting FORM DIGEST\n#\n" if $DEBUG_SP_LI;
 
         foreach (qx(cat $GET_DIGEST_RESPONSE)) {
             chomp;
 
             foreach my $t_ (qw(FormDigestValue FormDigestTimeoutSeconds)) {
                 if (m!<d:($t_)[^>]*>(.*)</d:$t_[^>]*>!) {
-                    $PROPS{$1} = $2;
-                    $PROPS{$t_} = time + $PROPS{$t_} - 600 if $t_ eq 'FormDigestTimeoutSeconds';
+		    if ($t_ eq 'FormDigestTimeoutSeconds') {
+			$ENV{SHAREPOINT_CONN_FORM_DIGEST_TIMEOUT} = time + $2 - 600;
+		    }
+		    else {
+			$ENV{SHAREPOINT_CONN_FORM_DIGEST_VALUE} = $2;
+		    }
                 }
             }
         }
 
-        foreach (qw(FormDigestValue FormDigestTimeoutSeconds)) {
-            unless ($PROPS{$_}) {
-                saveError("UNABLE TO GET DIGEST !!");
+        foreach (qw(SHAREPOINT_CONN_FORM_DIGEST_TIMEOUT SHAREPOINT_CONN_FORM_DIGEST_VALUE)) {
+            unless ($ENV{$_}) {
+                saveError("UNABLE TO GET $_ !!");
                 delete $PROPS{NTLM};
             }
         }
@@ -349,13 +438,13 @@ if ($PROPS{NTLM}) {
     unless ($OPTS{digest}) {
         my %CURL = ( resp_file => $GET_LIST_RESPONSE, url => $URL);
 
-        if ($PROPS{Cookie}) {
+        if ($ENV{SHAREPOINT_CONN_COOKIE}) {
             $CURL{cipher} = 'AES256-SHA';
-            $CURL{header}{Authorization} = "Bearer $PROPS{FormDigestValue}";
-            $CURL{header}{Cookie} = $PROPS{Cookie};
+            $CURL{header}{Authorization} = "Bearer $ENV{SHAREPOINT_CONN_FORM_DIGEST_VALUE}";
+            $CURL{header}{Cookie} = $ENV{SHAREPOINT_CONN_COOKIE};
         }
         else {
-            $CURL{header}{'X-RequestDigest'} = $PROPS{FormDigestValue};
+            $CURL{header}{'X-RequestDigest'} = $ENV{SHAREPOINT_CONN_FORM_DIGEST_VALUE};
         }
 
         $CURL{request} = $OPTS{request} if $OPTS{request};
@@ -421,7 +510,20 @@ if ($PROPS{NTLM}) {
         if ($OPTS{digest}) {
             my %h_;
 
-            map { $h_{$_} = $PROPS{$_} if $PROPS{$_} } qw(FormDigestValue FormDigestTimeoutSeconds Cookie CookieExpires);
+	    foreach (@DIGEST_KEYS) {
+		$h_{$_} = $ENV{$_} if $ENV{$_};
+	    }
+
+	    my $tmp_ = "$TMP_DIR/sp_digest.json";
+
+	    if (open(SP_DIGEST, ">$tmp_") && chmod(0600, $tmp_)) {
+		print SP_DIGEST JSON->new->utf8(1)->pretty(1)->encode(\%h_);
+		close SP_DIGEST;
+
+		rename($tmp_, $SP_DIGEST);
+
+		$h_{COMMENT} = "CREATED $SP_DIGEST " . scalar(qx(ls -l $SP_DIGEST));
+	    }
 
             print Dumper(\%h_);
         }
@@ -570,7 +672,9 @@ sub writeNETRC {
     open(NETRC, ">$netrc_") or die "Wopen $netrc_ : $!";
     chmod(0600, $netrc_) or die "chmod $netrc_ : $!";
 
-    $netrc_ = "machine $SHAREPOINT_HOST login $PROPS{$SHAREPOINT_CONN_PROP}\n";
+    decryptConnStr();
+
+    $netrc_ = "machine $ENV{SHAREPOINT_HOST} login $ENV{SHAREPOINT_CONN_DECRYPTED}\n";
     $netrc_ =~ s!\@! password !;
 
     print NETRC $netrc_;
@@ -631,8 +735,8 @@ sub curl {
     print KSH "export HOME=$TMP_DIR\n\n";
     print KSH "export http_proxy=$ENV{HTTP_PROXY}\n\n" if $ENV{HTTP_PROXY};
     print KSH "export HTTPS_PROXY=$ENV{HTTPS_PROXY}\n\n" if $ENV{HTTPS_PROXY};
-    print KSH "umask 002\n\n";
-    print KSH "/usr/bin/curl -v --max-time $PROPS{CURL_MAX_TIME} -n $PROPS{NTLM} \\\n";
+    print KSH "umask 007\n\n";
+    print KSH "/usr/bin/curl -v $PROPS{NTLM} \\\n";
     print KSH " -o $h_{resp_file}     \\\n" if $h_{resp_file};
     print KSH " -c $h_{cookies}       \\\n" if $h_{cookies};
     print KSH " -X $h_{request}       \\\n" if $h_{request};
@@ -671,44 +775,70 @@ sub swizzleForHTTP {
     return $ret_;
 }
 
-__DATA__
-#
-# Following is example code
-#
+sub findFileInDirs {
+    my $file_ = shift;
+    my $ret_;
 
+    foreach (@_) {
+	my $p_ = "$_/$file_";
+	
+	if (-r $p_) {
+	    $ret_ = $p_;
+	    last;
+	}
+    }
+
+    return $ret_;
+}
+
+sub decryptConnStr {
+    unless ($ENV{SHAREPOINT_CONN_DECRYPTED}) {
+	if ($ENV{SHAREPOINT_CONN_ENCRYPTED}) {
+	    $ENV{SHAREPOINT_CONN_DECRYPTED} = qx($DECRYPT $ENV{SHAREPOINT_CONN_ENCRYPTED});
+	}
+
+	unless ($ENV{SHAREPOINT_CONN_DECRYPTED}) {
+	    print STDERR "CANNOT DECRYPT PW!!\n";
+	    exit($EXIT);
+	}
+    }
+}
+
+__DATA__
 get_sp_list_items.pl \
         -create -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" \
-        http://sharepoint/sites/etl Bogus
+        Bogus [SP_SITE]
 
 echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'New_bogus-$$' }" | \
-        get_sp_list_items.pl -create -data @- \
-        http://sharepoint/sites/etl Bogus
+        get_sp_list_items.pl -create -data @- Bogus [SP_SITE]
 
 get_sp_list_items.pl \
-        -create -data "@create_data.txt" \
-        http://sharepoint/sites/etl Bogus
+        -create -data "@create_data.txt" Bogus [SP_SITE]
 
 get_sp_list_items.pl \
         -update -id $ID -data "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" \
-        http://sharepoint/sites/etl Bogus
+        Bogus [SP_SITE]
 
 echo "{ '__metadata': { 'type': 'SP.Data.BogusListItem' }, 'Title': 'Updated-$$' }" | \
-        get_sp_list_items.pl -update -id $ID -data @- \
-        http://sharepoint/sites/etl Bogus
+        get_sp_list_items.pl -update -id $ID -data @- Bogus [SP_SITE]
 
 get_sp_list_items.pl \
-        -update -id $ID -data "@update_data.txt" \
-        http://sharepoint/sites/etl Bogus
+        -update -id $ID -data "@update_data.txt" Bogus [SP_SITE]
 
-get_sp_list_items.pl \
-        -delete -id $ID \
-        http://sharepoint/sites/etl Bogus
+get_sp_list_items.pl -delete -id $ID Bogus [SP_SITE]
 
-get_sp_list_items.pl -meta http://sharepoint/sites/etl Bogus
+get_sp_list_items.pl -meta Bogus [SP_SITE]
 
-get_sp_list_items.pl http://sharepoint/sites/etl Bogus
+get_sp_list_items.pl Bogus [SP_SITE]
 
-get_sp_list_items.pl -query '$top=5' http://sharepoint/sites/etl Bogus
+get_sp_list_items.pl -query '$top=5' Bogus [SP_SITE]
+
+get_sp_list_items.pl -query '$filter=ID eq 3' Bogus [SP_SITE]
+
+get_sp_list_items.pl -query "\$filter=startswith(Title,'Updated')" Bogus [SP_SITE]
+
+get_sp_list_items.pl -query "\$filter=substringof('dated',Title)" Bogus [SP_SITE]
+
 
 #!/usr/bin/python
 #
@@ -724,7 +854,7 @@ CMD = os.getenv("HOME") + "/etlsupp/bin/get_sp_list_items.pl"
 SP_LIST = "Our_Servers"
 URL = "http://sharepoint/sites/etl"
 
-PROCESS = subprocess.Popen([CMD, "-json", "-meta", URL, SP_LIST], stdout=subprocess.PIPE)
+PROCESS = subprocess.Popen([CMD, "-json", "-meta", SP_LIST, URL], stdout=subprocess.PIPE)
 OUTPUT, UNUSED_ERR = PROCESS.communicate()
 RET_CODE = PROCESS.poll()
 
@@ -739,7 +869,7 @@ if RET_CODE == 0 :
 else :
     sys.exit(1)
 
-PROCESS = subprocess.Popen([CMD, "-json", "-query", "$top=" + str(q['d']['ItemCount']), URL, SP_LIST], stdout=subprocess.PIPE)
+PROCESS = subprocess.Popen([CMD, "-json", "-query", "$top=" + str(q['d']['ItemCount']), SP_LIST, URL], stdout=subprocess.PIPE)
 OUTPUT, UNUSED_ERR = PROCESS.communicate()
 RET_CODE = PROCESS.poll()
 
@@ -756,7 +886,7 @@ use strict;
 my $CMD = "$ENV{HOME}/etlsupp/bin/get_sp_list_items.pl";
 my $SP_LIST = "Our_Servers";
 my $URL = "http://sharepoint/sites/etl";
-my $VAR1 = qx($CMD -meta $URL $SP_LIST);
+my $VAR1 = qx($CMD -meta $SP_LIST $URL);
 my $TOP = '$top=';
 
 if ($VAR1) {

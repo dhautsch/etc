@@ -1,0 +1,308 @@
+#!/bin/bash
+test -n "$SET_MINUSX" && set -x
+
+MY_BUCKET_SUB_FOLDER=select_test
+MY_LAMBDA=arn:aws:lambda:us-east-1:123456789012:function:buckaroo-devl-mon:DEV
+
+#
+# Caution when editing below here
+#
+if cd $(dirname $0)
+then
+    TOP=$(pwd)
+else
+    exit 1
+fi
+
+MY_MVN=$TOP/maven
+MY_JDK=$TOP/jdk
+MY_JRE=$TOP/jre
+
+test -f $MY_MVN/bin/mvn || FAULT="Cannot find $MY_MVN"
+test -f $MY_JDK/bin/java  || FAULT="Cannot find $MY_JDK"
+test -f $MY_JRE/bin/java  || FAULY="Cannot find $MY_JRE"
+
+if test -n "$FAULT"
+then
+    echo "FAIL - $FAULT"
+    exit 1
+fi
+
+test -e tarball || ln -s maker tarball
+test -e runner || ln -s maker runner
+
+USE_ONE_JAR=t
+
+case $(basename $0) in
+    runner)
+	CONFIG_PROPS=$TOP/config.properties
+	RUNNER=$HOME/MPSTAT/aws_util
+	MY_BUCKET=$(perl -lane 'print $1 if m!^aws.bucket=(\S+)!' $CONFIG_PROPS)
+
+	TEST=test00
+	test -n "$1" && TEST=$1
+
+	case $TEST in
+	    init)
+		cat > $TOP/cp.csv <<EOF
+Fred,Flintstone
+Wilma,Flintstone
+Pebbles,Flintstone
+Betty,Rubble
+Barney,Rubble
+BamBam,Rubble
+EOF
+		gzip -c $TOP/cp.csv > $TOP/cp.csv.gz
+			    
+		cat > $TOP/document.json <<EOF
+{"name": "Susan Smith",
+"org": "engineering",
+"projects":
+    [
+     {"project_name":"project1", "completed":false},
+     {"project_name":"project2", "completed":true}
+    ]
+}
+EOF
+		gzip -c $TOP/document.json > $TOP/document.json.gz
+			    
+		cat > $TOP/lines.json <<EOF
+{"first" : "Fred", "last" : "Flintstone" }
+{"first" : "Wilma", "last" : "Flintstone" }
+{"first" : "Pebbles", "last" : "Flintstone" }
+{"first" : "Barney", "last" : "Rubble" }
+{"first" : "Betty", "last" : "Rubble" }
+{"first" : "BamBam", "last" : "Rubble" }
+EOF
+		gzip -c $TOP/lines.json > $TOP/lines.json.gz
+
+		if test -f $TOP/lambda_input.json
+		then
+		    true
+		else
+		    echo '{ "S3_PUT_OBJ": "'$MY_BUCKET_SUB_FOLDER'/lamda_dropping.json", "S3_PUT_MSG": "Hello AWS" }' > $TOP/lambda_input.json
+		fi
+
+		if test -f $TOP/query_csv.sql
+		then
+		    true
+		else
+		    echo "select * from s3object s where s._2 = 'Flintstone'" > $TOP/query_csv.sql
+		fi
+
+		if test -f $TOP/query_lines.sql
+		then
+		    true
+		else
+		    cat > $TOP/query_lines.sql <<EOF
+select s.* from s3object s where s."last" = 'Flintstone'
+EOF
+		fi
+
+		if test -f $TOP/query_document.sql
+		then
+		    true
+		else
+		    echo 'Select s.projects[0].project_name from S3Object s' > $TOP/query_document.sql
+		fi
+
+		exit $?
+		;;
+	    test00)
+		set -x
+		$RUNNER S3_LIST_BUCKETS 2>$TOP/out_runner.txt | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test01)
+		$RUNNER S3_LIST_BUCKET /$MY_BUCKET $MY_BUCKET_SUB_FOLDER 2>$TOP/out_runner.txt | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test02)
+		$RUNNER S3_LIST_BUCKET /$MY_BUCKET $MY_BUCKET_SUB_FOLDER/stdin / 2>$TOP/out_runner.txt | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test03)
+		#
+		# put from file
+		#
+		$TOP/runner init
+
+		for f in lambda-etladm-devl-mon-201807261930.zip config.json
+		do
+		    bucketKey=/$MY_BUCKET/r2udeh/$f
+		    $RUNNER S3_PUT_OBJ $TOP/$f $bucketKey 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
+		done
+		exit 0
+		;;
+	    test04)
+		#
+		# put from file
+		#
+		for f in cp.csv document.json lines.json cp.csv.gz document.json.gz lines.json.gz query_document.sql query_csv.sql query_lines.sql
+		do
+		    bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/$f
+		    $RUNNER S3_PUT_OBJ $TOP/$f $bucketKey 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
+		done
+		exit 0
+		;;
+	    test05)
+		#
+		# put from stdin
+		#
+#			$TOP/runner init
+		for f in cp.csv document.json lines.json cp.csv.gz document.json.gz lines.json.gz query_document.sql query_csv.sql query_lines.sql
+		do
+		    bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/stdin_$f
+		    $RUNNER S3_PUT_OBJ - $bucketKey <$TOP/$f 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
+		done
+		exit 0
+		;;
+	    test06)
+		#
+		# get to stdout, cmp with src
+		#
+		for f in cp.csv document.json lines.json cp.csv.gz document.json.gz lines.json.gz
+		do
+		    n=stdout_$f
+		    rm -f $TOP/$n
+		    bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/stdin_$f
+		    $RUNNER S3_GET_OBJ $bucketKey - > $TOP/$n 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
+		    (
+			ls -l $TOP/$f $TOP/$n
+			shasum $TOP/$f $TOP/$n
+		    ) | sed -e "s!^!$TEST !"
+		done
+		exit 0
+		;;
+	    test07)
+		#
+		# get to file, cmp with src
+		#
+		for f in cp.csv document.json lines.json cp.csv.gz document.json.gz lines.json.gz
+		do
+		    n=new_$f
+		    bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/$f
+		    $RUNNER S3_GET_OBJ $bucketKey $TOP/$n 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
+		    (
+			ls -l $TOP/$f $TOP/$n
+			shasum $TOP/$f $TOP/$n
+		    ) | sed -e "s!^!$TEST !"
+		done
+		exit 0
+		;;
+	    test10)
+		#
+		# Query on stdin, results to stdout
+		#
+		bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/cp.csv.gz
+		(
+		    cat $TOP/query_csv.sql | \
+			$RUNNER S3_GZIPPED_CSV_QUERY $bucketKey - - 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test11)
+		#
+		# Query from file, results to stdout
+		#
+		query=$TOP/query_lines.sql
+		bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/lines.json
+		(
+		    $RUNNER S3_JSON_QUERY_LINES $bucketKey - $query 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test12)
+		#
+		# Query from file, results to file
+		#
+		query=$TOP/query_document.sql
+		query_out=$TOP/out_query_document.txt
+		test -z "$NOCLOBBER" && rm -f $query_out
+		bucketKey=/$MY_BUCKET/$MY_BUCKET_SUB_FOLDER/document.json.gz
+		(
+		    $RUNNER S3_GZIPPED_JSON_QUERY_DOCUMENT $bucketKey $query_out $query 2>$TOP/out_runner.txt
+		    if grep SUCCESS $TOP/out_runner.txt
+		    then
+			cat $query_out
+		    fi
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test15)
+		#
+		# call lambda with dat from stdin, results to stdout
+		#
+		(
+		    cat $TOP/lambda_input.json | \
+			$RUNNER LAMBDA $MY_LAMBDA - - 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test16)
+		#
+		# call lambda with dat from file, results to stdout
+		#
+		(
+		    $RUNNER LAMBDA $MY_LAMBDA $TOP/lambda_input.json - 2>$TOP/out_runner.txt
+		    grep SUCCESS $TOP/out_runner.txt
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	    test17)
+		#
+		# call lambda with dat from file, results to file
+		#
+		lambda_out=$TOP/lambda_output.json
+		rm -f $lambda_out
+		(
+		    $RUNNER LAMBDA $MY_LAMBDA $TOP/lambda_input.json $lambda_out 2>$TOP/out_runner.txt
+		    if grep SUCCESS $TOP/out_runner.txt
+		    then
+			cat $lambda_out
+			echo
+		    fi
+		) | sed -e "s!^!$TEST !"
+		exit 0
+		;;
+	esac
+
+	echo "EXITING UNKNOWN TEST" && exit 1
+	;;
+    tarball) set -x
+	     tar cvf aws_java.tar \
+		 aws_util \
+		 runner \
+		 pom.xml \
+		 src/main/java/Driver.java \
+		 src/main/resources/log4j.xml \
+		 src/main/resources/saml.properties \
+		 src/main/resources/zscaller.jks \
+		 target/STSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+	     ;;
+    maker)
+	export JAVA_HOME=$MY_JDK
+	PATH=$JAVA_HOME/bin:$MY_MVN/bin:$PATH
+
+	KS=$TOP/src/main/resources/zscaller.jks
+	
+	KS_PW=changeit
+
+	if test `keytool -list -v -keystore $KS -srcstorepass $KS_PW -deststorepass $KS_PW | perl -lane 'print if m!^Alias!'|wc -l` -lt 3
+	then
+	    keytool -importkeystore -srckeystore "$JAVA_HOME/jre/lib/security/cacerts" -destkeystore $KS -srcstorepass $KS_PW -deststorepass $KS_PW
+	fi
+
+	mvn clean package dependency:build-classpath -Dmdep.outputFile=$TOP/cp.txt
+
+	$TOP/tarball
+	;;
+esac

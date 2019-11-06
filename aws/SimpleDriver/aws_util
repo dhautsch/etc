@@ -1,0 +1,220 @@
+#!/usr/bin/perl
+
+use Data::Dumper;
+use File::Basename;
+use Time::Local;
+use sigtrap qw/handler normal_signal_handler normal-signals/;
+use FindBin;
+use lib "$FindBin::Bin/lib/perl";
+use JSON;
+use strict;
+
+my %PROPS;
+my $WHOAMI = qx(whoami); chomp $WHOAMI;
+my %PROP_MAP = qw(
+    AWS_BUCKET aws.bucket
+    AWS_CONN_ENCRYPTED aws.conn
+    AWS_KMS_KEYID aws.kms.keyid
+    AWS_REGION aws.region
+); %PROP_MAP = (%PROP_MAP, reverse(%PROP_MAP));
+my $PROP_PAT = join('|', values %PROP_MAP); $PROP_PAT = "^($PROP_PAT)=(\\S+)";
+my $TRAILING_WS = '\s*$';
+my $SCRIPT_DIR = dirname($0); $SCRIPT_DIR = qx(cd $SCRIPT_DIR && pwd); chomp $SCRIPT_DIR;
+my $JAVA_HOME = "$SCRIPT_DIR/jre";
+my $JAVA_BIN = "$JAVA_HOME/bin";
+my $JAVA_JAR = "$SCRIPT_DIR/lib/java/STSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar";
+my $DECRYPT = "$SCRIPT_DIR/decrypt";
+my $AWS_DIGEST = "/tmp/$WHOAMI-aws_digest.json";
+my $TMP_AWS_DIGEST = "$AWS_DIGEST-$$";
+my $CONN_ENCRYPTED_KEY = 'AWS_CONN_ENCRYPTED';
+my $CONN_DECRYPTED_KEY = 'AWS_CONN';
+my @AWS_SECRET_KEYS = qw(
+    AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY
+    AWS_SESSION_TOKEN
+    );
+my @DIGEST_KEYS = (@AWS_SECRET_KEYS, qw(
+    AWS_BUCKET
+    AWS_CONN_ENCRYPTED
+    AWS_KMS_KEYID
+    AWS_REGION
+    ));
+my $AWS_KEYS_PAT = join('|', @DIGEST_KEYS);
+my $AWS_DIGEST_OBJ;
+my $DEBUG_AWS_UTIL = $ENV{DEBUG_AWS_UTIL} ? JSON->new->allow_nonref->decode($ENV{DEBUG_AWS_UTIL}) : undef;
+my @CONFIG_FILES = ( "$SCRIPT_DIR/config.properties" , "$ENV{HOME}/MPSTAT/config.properties", "$ENV{HOME}/etlsupp/config.properties" );
+my $TIME = time;
+my $EXIT = 1;
+my $VAR1;
+
+sub normal_signal_handler { unlink($TMP_AWS_DIGEST) };
+
+END { normal_signal_handler(); exit($EXIT) };
+
+if (-d $JAVA_BIN && -f $JAVA_JAR) {
+    $ENV{JAVA_HOME} = $JAVA_HOME;
+    $ENV{PATH} = "$JAVA_BIN:$ENV{PATH}";
+}
+else {
+    print STDERR "FAIL - CANNOT DETERMINE JAVA CONFIGURATION\n";
+    exit($EXIT = 2);
+}
+
+if (exists $ENV{AWS_ATTEMPT}) {
+    $ENV{AWS_ATTEMPT}-- if $ENV{AWS_ATTEMPT};
+}
+else {
+    $ENV{AWS_ATTEMPT} = 2;
+}
+
+if ($ENV{AWS_ATTEMPT}) {
+    unshift @CONFIG_FILES, $ENV{CONFIG_PROPS} if $ENV{CONFIG_PROPS};
+
+    foreach my $config_ (@CONFIG_FILES) {
+	if (open(CFG, $config_)) {
+	    while (<CFG>) {
+		if (m!$PROP_PAT!) {
+		    $PROPS{$PROP_MAP{$1}} = $2;
+		}
+	    }
+	    close CFG;
+
+	    foreach (@DIGEST_KEYS) {
+		$ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	    }
+
+	    last;
+	}
+    }
+
+    $DEBUG_AWS_UTIL = JSON->new->allow_nonref->decode($ENV{$DEBUG_AWS_UTIL}) if $ENV{$DEBUG_AWS_UTIL};
+
+    my $getAccessKeysOpt_ = 'GET_ACCESS_KEYS';
+    my $secretKeyCnt_ = 0;
+
+    if ($ARGV[0] eq $getAccessKeysOpt_) {
+	unlink($AWS_DIGEST);
+
+	map { delete $ENV{$_} } @AWS_SECRET_KEYS;
+    }
+    else {
+	map { $secretKeyCnt_++ if $ENV{$_} } @AWS_SECRET_KEYS;
+    }
+
+    if (-r $AWS_DIGEST) {
+	my $json_;
+	$json_ = qx(cat $AWS_DIGEST);
+	$VAR1 = JSON->new->allow_nonref->decode($json_);
+	
+	map { delete $ENV{$_} } @AWS_SECRET_KEYS;
+
+	foreach (keys %$VAR1) {
+	    $PROPS{$_} = $VAR1->{$_} if $VAR1->{$_} && m!^($AWS_KEYS_PAT)!;
+	}
+
+	foreach (@DIGEST_KEYS) {
+	    $ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	}
+
+	map { $secretKeyCnt_++ if $ENV{$_} } @AWS_SECRET_KEYS;
+
+	if ($secretKeyCnt_ != 3) {
+	    print STDERR "FAIL - $0 REUSE $AWS_DIGEST\n";
+	    exit($EXIT);
+	}
+    }
+    elsif ($secretKeyCnt_ != 3) {
+	unlink($AWS_DIGEST);
+
+	map { delete $ENV{$_} } @AWS_SECRET_KEYS;
+
+	$secretKeyCnt_ = 0;
+
+	$ENV{$CONN_DECRYPTED_KEY} = qx($DECRYPT $ENV{$CONN_ENCRYPTED_KEY});
+	chomp $ENV{$CONN_DECRYPTED_KEY};
+
+	my @out_;
+
+	foreach (qx(java -jar $JAVA_JAR $getAccessKeysOpt_ 2>&1)) {
+	    push @out_, $_;
+	    
+	    if (m!AWSCredentialAccessKeyId=(\S+)!) {
+		$ENV{AWS_ACCESS_KEY_ID} = $1;
+		$secretKeyCnt_++;
+	    }
+	    elsif (m!AWSCredentialSecretAccessKey=(\S+)!) {
+		$ENV{AWS_SECRET_ACCESS_KEY} = $1;
+		$secretKeyCnt_++;
+	    }
+	    elsif (m!AWSCredentialSessionToken=(\S+)!) {
+		$ENV{AWS_SESSION_TOKEN} = $1;
+		$secretKeyCnt_++;
+	    }
+	}
+
+	if ($secretKeyCnt_ == 3) {
+	    foreach (@DIGEST_KEYS) {
+		$ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
+	    }
+
+	    my %h_;
+
+	    foreach (keys %ENV) {
+		$h_{$_} = $ENV{$_} if $ENV{$_} && m!^($AWS_KEYS_PAT)!;
+	    }
+
+	    if (open(AWS_DIGEST, ">$TMP_AWS_DIGEST") && chmod(0600, $TMP_AWS_DIGEST)) {
+		print AWS_DIGEST JSON->new->utf8(1)->pretty(1)->encode(\%h_);
+		close AWS_DIGEST;
+
+		rename($TMP_AWS_DIGEST, $AWS_DIGEST);
+
+		if ($ARGV[0] eq $getAccessKeysOpt_) {
+		    map { print } @out_;
+		    exit($EXIT = 0);
+		}
+	    }
+	}
+	else {
+	    print STDERR "FAIL - $0 $getAccessKeysOpt_\n";
+	    exit($EXIT);
+	}
+    }
+
+    if (open(LOG, ">$TMP_AWS_DIGEST") && chmod(0600, $TMP_AWS_DIGEST)) {
+	close LOG;
+    }
+    else {
+	die "Wopen $TMP_AWS_DIGEST : $!";
+    }
+
+    print qx(java -jar $JAVA_JAR @ARGV 2>$TMP_AWS_DIGEST);
+    $EXIT = $? >> 2;
+
+    if (open(LOG, $TMP_AWS_DIGEST)) {
+	my $fatal_;
+	my $expiredToken_;
+
+	while (<LOG>) {
+	    $fatal_++ if m!FATAL\s+Driver!;
+	    
+	    $expiredToken_ = $_ if $fatal_ && m!com.amazonaws.services.(lambda|s3).model.(AWSLambdaException|AmazonS3Exception):\s+(The security token included in the request is expired|The provided token has expired).*Error Code: ExpiredToken!;
+	}
+	close LOG;
+
+	print STDERR qx(cat $TMP_AWS_DIGEST);
+
+	if ($fatal_ && $expiredToken_) {
+
+	    map { delete $ENV{$_} } @AWS_SECRET_KEYS;
+
+	    map { unlink($_) } $AWS_DIGEST, $TMP_AWS_DIGEST;
+	    
+	    my $cmd_ = "$0 @ARGV";
+
+	    exec($cmd_);
+	}
+    }
+}
+
+exit($EXIT);

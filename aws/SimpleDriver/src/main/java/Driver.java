@@ -83,6 +83,7 @@ public class Driver {
 		String listBucketPrefix_ = null;
 		String listBucketDelimiter_ = null;
 		int listBucketMaxKeys_ = 0;
+		int envVarUndef_ = 0;
 		String keyARN_ = System.getenv("AWS_KMS_KEYID");
 		String[] _awsCredData = {
 				  "AWS_ACCESS_KEY_ID", 
@@ -108,8 +109,8 @@ public class Driver {
 				}
 			}
 			else {
-				_logger.fatal("AWS_CONN FORMAT NOT USER/PASS@ROLE");
-				System.exit(exitCode_);
+				_logger.fatal("ENV AWS_CONN FORMAT NOT USER/PASS@ROLE");
+				envVarUndef_++;
 			}
 		}
 		else {
@@ -117,11 +118,16 @@ public class Driver {
 				String env_ = _awsCredData[i_];
 				String envValue_ = System.getenv(env_);
 				if (envValue_ == null) {
-					_logger.fatal("UNDEFINED ENV VAR : " + env_);
-					System.exit(exitCode_);
+					_logger.fatal("ENV " + env_ + " UNDEFINED");
+					envVarUndef_++;
 				}
 				else {
 					_awsCredData[i_] = envValue_;
+				}
+
+				if (envVarUndef_ > 0) {
+					_logger.fatal("ENV AWS_CONN UNDEFINED");
+					envVarUndef_++;
 				}
 			}
 		}

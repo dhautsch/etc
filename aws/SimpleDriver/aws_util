@@ -60,6 +60,11 @@ else {
     exit($EXIT = 2);
 }
 
+#
+# No args just run the jar which will dump out the help info
+#
+exec("java -jar $JAVA_JAR 2>&1") if scalar(@ARGV) < 1;
+
 if (exists $ENV{AWS_ATTEMPT}) {
     $ENV{AWS_ATTEMPT}-- if $ENV{AWS_ATTEMPT};
 }

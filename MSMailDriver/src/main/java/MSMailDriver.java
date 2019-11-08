@@ -20,7 +20,7 @@ import microsoft.exchange.webservices.data.core.service.item.*;
 import microsoft.exchange.webservices.data.core.enumeration.misc.*;
 import microsoft.exchange.webservices.data.core.enumeration.property.*;
 
-public class Driver {
+public class MSMailDriver {
 	private ExchangeService _service = null;
 	private Folder _folder = null;
 
@@ -39,7 +39,7 @@ public class Driver {
 		_dfUTC.setTimeZone(TimeZone.getTimeZone("UTC"));
 	}
 
-	public Driver(String args[]) {
+	public MSMailDriver(String args[]) {
 		if (args.length != 0 || StringUtils.isBlank(CONN)) {
 			System.err.println("Usage:\n\tjava ExchangeEmail\n");
 			System.err.println("This program reads emails Microsoft Exchange Server (O365)");
@@ -51,38 +51,39 @@ public class Driver {
 			System.err.println("set env PROXY_URL if exchange server is external.");
 			System.err.println("set env INCLUDE_BODY to include email body.");
 		}
-
-		Matcher m_ = Pattern.compile("^([^/]+)/([^@]+)@(.*)").matcher(CONN);
-
-		if (m_.find()) {
-			try {
-				ExchangeService o_ = new ExchangeService();
-				o_.setUrl(new URI(o365URI));
-				if (StringUtils.isNotBlank(System.getenv("PROXY_URL"))) {
-					o_.setWebProxy(new WebProxy(System.getenv("PROXY_URL")));
+		else {
+			Matcher m_ = Pattern.compile("^([^/]+)/([^@]+)@(.*)").matcher(CONN);
+	
+			if (m_.find()) {
+				try {
+					ExchangeService o_ = new ExchangeService();
+					o_.setUrl(new URI(o365URI));
+					if (StringUtils.isNotBlank(System.getenv("PROXY_URL"))) {
+						o_.setWebProxy(new WebProxy(System.getenv("PROXY_URL")));
+					}
+	
+					ExchangeCredentials credentials_ = new WebCredentials(m_.group(1) + "@" + m_.group(3), m_.group(2));
+	
+					o_.setCredentials(credentials_);
+	
+					INCLUDE_BODY = StringUtils.isNotBlank(System.getenv("INCLUDE_BODY"));
+	
+					if (StringUtils.isNotBlank(System.getenv("NUMBER_EMAILS_FETCH")))
+						NUMBER_EMAILS_FETCH = Integer.parseInt(System.getenv("NUMBER_EMAILS_FETCH").toString());
+					if (StringUtils.isNotBlank(System.getenv("ATTACHMENT_REGEX"))) {
+						ATTACHMENT_REGEX = System.getenv("ATTACHMENT_REGEX").toString();
+						_attachmentRegex = Pattern.compile(ATTACHMENT_REGEX);
+					}
+					if (StringUtils.isNotBlank(System.getenv("FROM_ADDRESS")))
+						FROM_ADDRESS = System.getenv("FROM_ADDRESS").toString();
+	
+					_service = o_;
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-
-				ExchangeCredentials credentials_ = new WebCredentials(m_.group(1) + "@" + m_.group(3), m_.group(2));
-
-				o_.setCredentials(credentials_);
-
-				INCLUDE_BODY = StringUtils.isNotBlank(System.getenv("INCLUDE_BODY"));
-
-				if (StringUtils.isNotBlank(System.getenv("NUMBER_EMAILS_FETCH")))
-					NUMBER_EMAILS_FETCH = Integer.parseInt(System.getenv("NUMBER_EMAILS_FETCH").toString());
-				if (StringUtils.isNotBlank(System.getenv("ATTACHMENT_REGEX"))) {
-					ATTACHMENT_REGEX = System.getenv("ATTACHMENT_REGEX").toString();
-					_attachmentRegex = Pattern.compile(ATTACHMENT_REGEX);
-				}
-				if (StringUtils.isNotBlank(System.getenv("FROM_ADDRESS")))
-					FROM_ADDRESS = System.getenv("FROM_ADDRESS").toString();
-
-				_service = o_;
-			} catch (Exception e) {
-				e.printStackTrace();
+			} else {
+				System.err.println("ENV EXCHG_CONN FORMAT NOT USER/PASS@DOMAIN");
 			}
-		} else {
-			System.err.println("ENV EXCHG_CONN FORMAT NOT USER/PASS@DOMAIN");
 		}
 	}
 
@@ -190,7 +191,7 @@ public class Driver {
 
 			o_.put("startTime", _dfUTC.format(new Date()));
 
-			Driver ee_ = new Driver(args);
+			MSMailDriver ee_ = new MSMailDriver(args);
 
 			if (ee_.getService() != null) {
 				WellKnownFolderName folderName_ = WellKnownFolderName.Inbox;

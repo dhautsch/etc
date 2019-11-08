@@ -83,7 +83,7 @@
 							<archive>
 								<manifest>
 									<mainClass>
-										Driver
+										MSMailDriver
 									</mainClass>
 								</manifest>
 							</archive>

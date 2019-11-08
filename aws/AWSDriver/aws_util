@@ -22,7 +22,7 @@ my $TRAILING_WS = '\s*$';
 my $SCRIPT_DIR = dirname($0); $SCRIPT_DIR = qx(cd $SCRIPT_DIR && pwd); chomp $SCRIPT_DIR;
 my $JAVA_HOME = "$SCRIPT_DIR/jre";
 my $JAVA_BIN = "$JAVA_HOME/bin";
-my $JAVA_JAR = "$SCRIPT_DIR/lib/java/STSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar";
+my $JAVA_JAR = "$SCRIPT_DIR/lib/java/AWSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar";
 my $DECRYPT = "$SCRIPT_DIR/decrypt";
 my $AWS_DIGEST = "/tmp/$WHOAMI-aws_digest.json";
 my $TMP_AWS_DIGEST = "$AWS_DIGEST-$$";

@@ -104,7 +104,7 @@ public class MSMailDriver {
 			ret_.put("fromAddress", em_.getFrom().getAddress().toString());
 			ret_.put("senderName", em_.getSender().getName().toString());
 			ret_.put("createDate", _dfUTC.format(em_.getDateTimeCreated()));
-			ret_.put("recievedDate", _dfUTC.format(em_.getDateTimeReceived()));
+			ret_.put("receivedDate", _dfUTC.format(em_.getDateTimeReceived()));
 			ret_.put("sentDate", _dfUTC.format(em_.getDateTimeSent()));
 			ret_.put("size", em_.getSize() + "");
 			ret_.put("emailHeader", StringUtils.join(ls_, "\n"));

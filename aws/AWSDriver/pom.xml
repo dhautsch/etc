@@ -11,7 +11,7 @@
 
 	<dependencies>
     <dependency>
-      <groupId>com.fanniemae.aws</groupId>
+      <groupId>com.yoyodyne.aws</groupId>
       <artifactId>sts</artifactId>
       <version>1.7</version>
     </dependency>

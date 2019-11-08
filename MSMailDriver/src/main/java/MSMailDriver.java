@@ -41,15 +41,15 @@ public class MSMailDriver {
 
 	public MSMailDriver(String args[]) {
 		if (args.length != 0 || StringUtils.isBlank(CONN)) {
-			System.err.println("Usage:\n\tjava ExchangeEmail\n");
+			System.err.println("Usage: java MSMailDriver");
 			System.err.println("This program reads emails Microsoft Exchange Server (O365)");
-			System.err.println("set env EXCHG_CONN to USER/PASS@yoyodyne.com of the account you want to read emails.");
-			System.err.println("set env NUMBER_EMAILS_FETCH to read first n emails [default:500].");
-			System.err.println("set env FROM_ADDRESS to filter sender email address [default:key@yoyodyne.com].");
-			System.err.println("set env ATTACHMENT_REGEX to keywords of attachment files,delimited by '|' for multiple.");
-			System.err.println("set env DOWNLOAD_DIR if you want to download attachments[default:/tmp].");
-			System.err.println("set env PROXY_URL if exchange server is external.");
-			System.err.println("set env INCLUDE_BODY to include email body.");
+			System.err.println("ENV EXCHG_CONN to USER/PASS@yoyodyne.com of the account you want to read emails.");
+			System.err.println("ENV NUMBER_EMAILS_FETCH to read first n emails [default:500].");
+			System.err.println("ENV FROM_ADDRESS to filter sender email address [default:key@yoyodyne.com].");
+			System.err.println("ENV ATTACHMENT_REGEX to keywords of attachment files,delimited by '|' for multiple.");
+			System.err.println("ENV DOWNLOAD_DIR if you want to download attachments[default:/tmp].");
+			System.err.println("ENV PROXY_URL if exchange server is external.");
+			System.err.println("ENV INCLUDE_BODY to include email body.");
 		}
 		else {
 			Matcher m_ = Pattern.compile("^([^/]+)/([^@]+)@(.*)").matcher(CONN);

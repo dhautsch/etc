@@ -61,12 +61,12 @@ import static com.amazonaws.util.IOUtils.copy;
 import static com.amazonaws.util.IOUtils.toByteArray;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import com.yoyodyne.access.sts.AWSFederationAccess;
+import com.fanniemae.access.sts.AWSFederationAccess;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class Driver {
+public class AWSDriver {
 
-	final static Logger _logger = Logger.getLogger(Driver.class);
+	final static Logger _logger = Logger.getLogger(AWSDriver.class);
 	final static String _regionEnvVar  = "AWS_REGION";
 	final static String _regionFromEnv = System.getenv(_regionEnvVar);
 	final static String _defaultRegion = "us-east-1";
@@ -125,11 +125,12 @@ public class Driver {
 					_awsCredData[i_] = envValue_;
 				}
 
-				if (envVarUndef_ > 0) {
-					_logger.fatal("ENV AWS_CONN UNDEFINED");
-					envVarUndef_++;
-				}
 			}
+		}
+
+		if (envVarUndef_ > 0) {
+			_logger.fatal("ENV AWS_CONN UNDEFINED");
+			envVarUndef_++;
 		}
 
 		if (args.length < 1
@@ -445,7 +446,7 @@ public class Driver {
 
 	private static void initSSL() throws Exception {
 		if (_clientConf == null) {
-			InputStream propInputStream_ = Driver.class.getClassLoader()
+			InputStream propInputStream_ = AWSDriver.class.getClassLoader()
 					.getResourceAsStream("saml.properties");
 			Properties config_ = new Properties();
 
@@ -456,7 +457,7 @@ public class Driver {
 
 			KeyStore trustKeyStore_ = KeyStore.getInstance("JKS");
 			trustKeyStore_.load(
-					Driver.class.getClassLoader().getResourceAsStream(config_.getProperty("TRUST_STORE")),
+					AWSDriver.class.getClassLoader().getResourceAsStream(config_.getProperty("TRUST_STORE")),
 					trustStoreAPassword_.toCharArray());
 
 			SSLContext sslcontext_ = SSLContexts.custom()

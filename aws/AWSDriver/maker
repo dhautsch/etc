@@ -2,7 +2,7 @@
 test -n "$SET_MINUSX" && set -x
 
 MY_BUCKET_SUB_FOLDER=select_test
-MY_LAMBDA=arn:aws:lambda:us-east-1:123456789012:function:buckaroo-devl-mon:DEV
+MY_LAMBDA=arn:aws:lambda:us-east-1:1234567890:function:buckaroo-devl-mon:DEV
 
 #
 # Caution when editing below here
@@ -36,7 +36,7 @@ USE_ONE_JAR=t
 case $(basename $0) in
     runner)
 	CONFIG_PROPS=$TOP/config.properties
-	RUNNER=$HOME/MPSTAT/aws_util
+	RUNNER=~/MPSTAT/aws_util
 	MY_BUCKET=$(perl -lane 'print $1 if m!^aws.bucket=(\S+)!' $CONFIG_PROPS)
 
 	TEST=test00
@@ -127,9 +127,9 @@ EOF
 		#
 		$TOP/runner init
 
-		for f in lambda-etladm-devl-mon-201807261930.zip config.json
+		for f in lambda-buckaroo-devl-mon-201807261930.zip config.json
 		do
-		    bucketKey=/$MY_BUCKET/r2udeh/$f
+		    bucketKey=/$MY_BUCKET/banzai/$f
 		    $RUNNER S3_PUT_OBJ $TOP/$f $bucketKey 2>$TOP/out_runner.txt
 		    grep SUCCESS $TOP/out_runner.txt | sed -e "s!^!$TEST $bucketKey !"
 		done
@@ -282,11 +282,11 @@ EOF
 		 aws_util \
 		 runner \
 		 pom.xml \
-		 src/main/java/Driver.java \
+		 src/main/java/AWSDriver.java \
 		 src/main/resources/log4j.xml \
 		 src/main/resources/saml.properties \
 		 src/main/resources/zscaller.jks \
-		 target/STSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar
+		 target/AWSDriver-0.0.1-SNAPSHOT-jar-with-dependencies.jar
 	     ;;
     maker)
 	export JAVA_HOME=$MY_JDK

@@ -186,6 +186,8 @@ public class MSMailDriver {
 	}
 
 	public static void main(String[] args) {
+		int exit_ = 1;
+		
 		try {
 			Map<String, Object> o_ = new HashMap<String, Object>();
 
@@ -225,10 +227,14 @@ public class MSMailDriver {
 					o_.put("endTime", _dfUTC.format(new Date()));
 
 					System.out.println(new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(o_));
+
+					exit_ = 0;
 				}
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		System.exit(exit_);
 	}
 }

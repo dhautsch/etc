@@ -95,11 +95,6 @@ public class MSMailDriver {
 			String fromAddress_ = em_.getFrom().getAddress().toString();
 
 			if (_fromAddressRegex == null || _fromAddressRegex.matcher(fromAddress_).find()) {
-				List<String> ls_ = new ArrayList<String>();
-
-				for (InternetMessageHeader imh_ : em_.getInternetMessageHeaders().getItems()) {
-					ls_.add(imh_.getValue());
-				}
 				ret_ = new HashMap<String, Object>();
 				
 				ret_.put("emailItemId", em_.getId().toString());
@@ -112,22 +107,22 @@ public class MSMailDriver {
 				ret_.put("receivedDate", _dfUTC.format(em_.getDateTimeReceived()));
 				ret_.put("sentDate", _dfUTC.format(em_.getDateTimeSent()));
 				ret_.put("size", em_.getSize() + "");
-				ret_.put("emailHeader", StringUtils.join(ls_, "\n"));
+				ret_.put("emailHeader", em_.getInternetMessageHeaders().getItems());
 				ret_.put("attachmentCount", "0");
 
 				if (INCLUDE_BODY)
 					ret_.put("emailBody", em_.getBody().toString());
 
 				if (em_.getHasAttachments() && em_.getAttachments().getItems().size() > 0) {
+					List<String> ls_ = new ArrayList<String>();
 					AttachmentCollection attachmentsCol_ = em_.getAttachments();
-					ret_.put("attachmentCount", "" + em_.getAttachments().getItems().size());
 
-					ls_ = new ArrayList<String>();
+					ret_.put("attachmentCount", "" + em_.getAttachments().getItems().size());
 
 					for (int i = 0; i < attachmentsCol_.getCount(); i++) {
 						ls_.add(attachmentsCol_.getPropertyAtIndex(i).getName());
 					}
-					ret_.put("attachmentNames", StringUtils.join(ls_, ";"));
+					ret_.put("attachmentNames", ls_);
 
 					if (StringUtils.isNotBlank(DOWNLOAD_DIR) && _attachmentRegex != null && _fromAddressRegex != null) {
 						attachmentsCol_ = em_.getAttachments();
@@ -152,7 +147,7 @@ public class MSMailDriver {
 						}
 
 						if (ls_.isEmpty() == false) {
-							ret_.put("downloadMsg", StringUtils.join(ls_, "\n"));
+							ret_.put("downloadMsg", ls_);
 						}
 					}
 				}

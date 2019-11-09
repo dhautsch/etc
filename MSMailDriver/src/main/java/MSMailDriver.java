@@ -23,15 +23,16 @@ import microsoft.exchange.webservices.data.core.enumeration.property.*;
 public class MSMailDriver {
 	private ExchangeService _service = null;
 	private Folder _folder = null;
+	private Pattern _attachmentRegex = null;
+	private Pattern _fromAddressRegex = null;
 
 	private Integer NUMBER_EMAILS_FETCH = 500;
 	private static String o365URI = "https://outlook.office365.com/EWS/Exchange.asmx";
 	private static String CONN = System.getenv("EXCHG_CONN");
 	private static String DOWNLOAD_DIR = System.getenv("DOWNLOAD_DIR");
-	private static String FROM_ADDRESS = System.getenv("FROM_ADDRESS");
+	private static String FROM_ADDRESS_REGEX = System.getenv("FROM_ADDRESS_REGEX");
 	private static String ATTACHMENT_REGEX = System.getenv("ATTACHMENT_REGEX");
 	private static Boolean INCLUDE_BODY = false;
-	public Pattern _attachmentRegex;
 	private static DateFormat _dfUTC = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
 	private static DateFormat _dfLOCAL = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
@@ -45,15 +46,14 @@ public class MSMailDriver {
 			System.err.println("This program reads emails Microsoft Exchange Server (O365)");
 			System.err.println("ENV EXCHG_CONN to USER/PASS@yoyodyne.com of the account you want to read emails.");
 			System.err.println("ENV NUMBER_EMAILS_FETCH to read first n emails [default:500].");
-			System.err.println("ENV FROM_ADDRESS to filter sender email address [default:key@yoyodyne.com].");
-			System.err.println("ENV ATTACHMENT_REGEX to keywords of attachment files,delimited by '|' for multiple.");
+			System.err.println("ENV FROM_ADDRESS_REGEX to filter sender email address, delimited by '|' for multiple.");
+			System.err.println("ENV ATTACHMENT_REGEX to keywords of attachment files, delimited by '|' for multiple.");
 			System.err.println("ENV DOWNLOAD_DIR if you want to download attachments[default:/tmp].");
 			System.err.println("ENV PROXY_URL if exchange server is external.");
 			System.err.println("ENV INCLUDE_BODY to include email body.");
-		}
-		else {
+		} else {
 			Matcher m_ = Pattern.compile("^([^/]+)/([^@]+)@(.*)").matcher(CONN);
-	
+
 			if (m_.find()) {
 				try {
 					ExchangeService o_ = new ExchangeService();
@@ -61,22 +61,21 @@ public class MSMailDriver {
 					if (StringUtils.isNotBlank(System.getenv("PROXY_URL"))) {
 						o_.setWebProxy(new WebProxy(System.getenv("PROXY_URL")));
 					}
-	
+
 					ExchangeCredentials credentials_ = new WebCredentials(m_.group(1) + "@" + m_.group(3), m_.group(2));
-	
+
 					o_.setCredentials(credentials_);
-	
+
 					INCLUDE_BODY = StringUtils.isNotBlank(System.getenv("INCLUDE_BODY"));
-	
+
 					if (StringUtils.isNotBlank(System.getenv("NUMBER_EMAILS_FETCH")))
 						NUMBER_EMAILS_FETCH = Integer.parseInt(System.getenv("NUMBER_EMAILS_FETCH").toString());
-					if (StringUtils.isNotBlank(System.getenv("ATTACHMENT_REGEX"))) {
-						ATTACHMENT_REGEX = System.getenv("ATTACHMENT_REGEX").toString();
+					if (StringUtils.isNotBlank(ATTACHMENT_REGEX))
 						_attachmentRegex = Pattern.compile(ATTACHMENT_REGEX);
-					}
-					if (StringUtils.isNotBlank(System.getenv("FROM_ADDRESS")))
-						FROM_ADDRESS = System.getenv("FROM_ADDRESS").toString();
-	
+
+					if (StringUtils.isNotBlank(FROM_ADDRESS_REGEX))
+						_fromAddressRegex = Pattern.compile(FROM_ADDRESS_REGEX);
+
 					_service = o_;
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -88,48 +87,49 @@ public class MSMailDriver {
 	}
 
 	public Map<String, Object> readEmailItem(ItemId itemId) throws Exception {
-		Map<String, Object> ret_ = new HashMap<String, Object>();
+		Map<String, Object> ret_ = null;
 
 		if (itemId != null) {
-			List<String> ls_ = new ArrayList<String>();
-			Boolean downloadMode_ = StringUtils.isNotBlank(DOWNLOAD_DIR) && StringUtils.isNotBlank(ATTACHMENT_REGEX)
-					&& StringUtils.isNotBlank(FROM_ADDRESS);
 			Item item_ = Item.bind(_service, itemId, PropertySet.FirstClassProperties);
 			EmailMessage em_ = EmailMessage.bind(_service, item_.getId());
+			String fromAddress_ = em_.getFrom().getAddress().toString();
 
-			ret_.put("emailItemId", em_.getId().toString());
-			ret_.put("to", em_.getToRecipients());
-			ret_.put("cc", em_.getCcRecipients());
-			ret_.put("subject", em_.getSubject().toString());
-			ret_.put("fromAddress", em_.getFrom().getAddress().toString());
-			ret_.put("senderName", em_.getSender().getName().toString());
-			ret_.put("createDate", _dfUTC.format(em_.getDateTimeCreated()));
-			ret_.put("receivedDate", _dfUTC.format(em_.getDateTimeReceived()));
-			ret_.put("sentDate", _dfUTC.format(em_.getDateTimeSent()));
-			ret_.put("size", em_.getSize() + "");
-			ret_.put("emailHeader", StringUtils.join(ls_, "\n"));
-			ret_.put("attachmentCount", "0");
+			if (_fromAddressRegex == null || _fromAddressRegex.matcher(fromAddress_).find()) {
+				List<String> ls_ = new ArrayList<String>();
 
-			for (InternetMessageHeader imh_ : em_.getInternetMessageHeaders().getItems()) {
-				ls_.add(imh_.getValue());
-			}
-
-			if (INCLUDE_BODY)
-				ret_.put("emailBody", em_.getBody().toString());
-
-			if (em_.getHasAttachments() && em_.getAttachments().getItems().size() > 0) {
-				AttachmentCollection attachmentsCol_ = em_.getAttachments();
-				ret_.put("attachmentCount", "" + em_.getAttachments().getItems().size());
-
-				ls_ = new ArrayList<String>();
-
-				for (int i = 0; i < attachmentsCol_.getCount(); i++) {
-					ls_.add(attachmentsCol_.getPropertyAtIndex(i).getName());
+				for (InternetMessageHeader imh_ : em_.getInternetMessageHeaders().getItems()) {
+					ls_.add(imh_.getValue());
 				}
-				ret_.put("attachmentNames", StringUtils.join(ls_, ";"));
+				ret_ = new HashMap<String, Object>();
+				
+				ret_.put("emailItemId", em_.getId().toString());
+				ret_.put("to", em_.getToRecipients());
+				ret_.put("cc", em_.getCcRecipients());
+				ret_.put("subject", em_.getSubject().toString());
+				ret_.put("fromAddress", fromAddress_);
+				ret_.put("senderName", em_.getSender().getName().toString());
+				ret_.put("createDate", _dfUTC.format(em_.getDateTimeCreated()));
+				ret_.put("receivedDate", _dfUTC.format(em_.getDateTimeReceived()));
+				ret_.put("sentDate", _dfUTC.format(em_.getDateTimeSent()));
+				ret_.put("size", em_.getSize() + "");
+				ret_.put("emailHeader", StringUtils.join(ls_, "\n"));
+				ret_.put("attachmentCount", "0");
 
-				if (downloadMode_) {
-					if (ret_.get("fromAddress").equals(FROM_ADDRESS)) {
+				if (INCLUDE_BODY)
+					ret_.put("emailBody", em_.getBody().toString());
+
+				if (em_.getHasAttachments() && em_.getAttachments().getItems().size() > 0) {
+					AttachmentCollection attachmentsCol_ = em_.getAttachments();
+					ret_.put("attachmentCount", "" + em_.getAttachments().getItems().size());
+
+					ls_ = new ArrayList<String>();
+
+					for (int i = 0; i < attachmentsCol_.getCount(); i++) {
+						ls_.add(attachmentsCol_.getPropertyAtIndex(i).getName());
+					}
+					ret_.put("attachmentNames", StringUtils.join(ls_, ";"));
+
+					if (StringUtils.isNotBlank(DOWNLOAD_DIR) && _attachmentRegex != null && _fromAddressRegex != null) {
 						attachmentsCol_ = em_.getAttachments();
 
 						ls_ = new ArrayList<String>();
@@ -187,7 +187,7 @@ public class MSMailDriver {
 
 	public static void main(String[] args) {
 		int exit_ = 1;
-		
+
 		try {
 			Map<String, Object> o_ = new HashMap<String, Object>();
 

@@ -35,7 +35,6 @@ my @AWS_SECRET_KEYS = qw(
     );
 my @DIGEST_KEYS = (@AWS_SECRET_KEYS, qw(
     AWS_BUCKET
-    AWS_CONN_ENCRYPTED
     AWS_KMS_KEYID
     AWS_REGION
     ));
@@ -84,7 +83,7 @@ if ($ENV{AWS_ATTEMPT}) {
 	    }
 	    close CFG;
 
-	    foreach (@DIGEST_KEYS) {
+	    foreach (@DIGEST_KEYS, $CONN_ENCRYPTED_KEY) {
 		$ENV{$_} = $PROPS{$_} if $PROPS{$_} && ! $ENV{$_};
 	    }
 
@@ -134,6 +133,11 @@ if ($ENV{AWS_ATTEMPT}) {
 	map { delete $ENV{$_} } @AWS_SECRET_KEYS;
 
 	$secretKeyCnt_ = 0;
+
+	unless ($ENV{$CONN_ENCRYPTED_KEY}) {
+	    print STDERR "FAIL - CANNOT DETERMINE ENV $CONN_ENCRYPTED_KEY\n";
+	    exit($EXIT = 2);
+	}
 
 	$ENV{$CONN_DECRYPTED_KEY} = qx($DECRYPT $ENV{$CONN_ENCRYPTED_KEY});
 	chomp $ENV{$CONN_DECRYPTED_KEY};
@@ -201,7 +205,7 @@ if ($ENV{AWS_ATTEMPT}) {
 	my $expiredToken_;
 
 	while (<LOG>) {
-	    $fatal_++ if m!FATAL\s+Driver!;
+	    $fatal_++ if m!^\d+-\d+-\d+\s+\d+:\d+:\d+\s+FATAL!;
 	    
 	    $expiredToken_ = $_ if $fatal_ && m!com.amazonaws.services.(lambda|s3).model.(AWSLambdaException|AmazonS3Exception):\s+(The security token included in the request is expired|The provided token has expired).*Error Code: ExpiredToken!;
 	}

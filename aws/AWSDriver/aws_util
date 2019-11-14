@@ -185,6 +185,7 @@ if ($ENV{AWS_ATTEMPT}) {
 	    }
 	}
 	else {
+	    map { print STDERR } @out_ if $ARGV[0] eq $getAccessKeysOpt_;
 	    print STDERR "FAIL - $0 $getAccessKeysOpt_\n";
 	    exit($EXIT);
 	}

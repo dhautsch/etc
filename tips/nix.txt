@@ -106,6 +106,16 @@ i=$((i+1))
 # find world writable
 find . -perm /002 -not -type l
 
+# date epoch
+date -u +%s
+date -d '1970-01-01 UTC '$(date -u +%s)' seconds'
+date -d @$(date -u +%s)
+
+# iso-8601
+date +%FT%T%z
+date -u +%FT%T%z
+date -u +%FT%TZ
+
 # Linux date arithmetic
 date -u -d "-100 minutes" +%FT%TZ
 date -d -30days

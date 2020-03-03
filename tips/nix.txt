@@ -14,6 +14,11 @@ export TMOUT=0
 
 alias ps='ps -efH' # display processes as tree
 
+alias pscpu='ps -eo user,pid,ppid,%mem,%cpu,nlwp,etime,cmd --sort=-%cpu'
+alias psmem='ps -eo user,pid,ppid,%mem,%cpu,nlwp,etime,cmd --sort=-%mem'
+alias psnlwp='ps -eo user,pid,ppid,%mem,%cpu,nlwp,etime,cmd --sort=-nlwp'
+alias ps='ps -Heo user,pid,ppid,%mem,%cpu,nlwp,etime,cmd'
+
 alias lf='ls -FCa'
 alias ll='ls -lart'
 

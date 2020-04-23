@@ -1,3 +1,6 @@
+--- To list schemas
+select username from sys.all_users order by username;
+
 --- To list all tables owned by the current user, type: 
 select tablespace_name, table_name from user_tables; 
 

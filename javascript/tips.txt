@@ -16,6 +16,10 @@ function x () {
     console.log(z);
 }
 
+//
+// explore object methods https://sdras.github.io/object-explorer/
+//
+
 // Clone an object
 let obj = { name: 'test'};
 let cloneObject = {...obj};

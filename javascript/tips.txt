@@ -18,6 +18,8 @@ var age = person.age;
 var eyeColor = person.eyeColor;
 
 let { firstName, lastName, age, eyeColor} = person;
+// does not have to be all when destructuring
+let { firstName, lastName } = person;
 
 // Object properties
 var a = 'test';
@@ -30,6 +32,7 @@ var okObj = {
   c: c
 };
 
+// simple object create from vars a, b, c
 let okObj = { a, b, c};
 
 // Template strings

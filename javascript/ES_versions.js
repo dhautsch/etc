@@ -1,5 +1,5 @@
 //
-// ES7 introduced includes and ** operator
+// ES7(2016) introduced includes and ** operator
 //
 const dragons = ['Tim', 'Johnathan', 'Sandy', 'Sarah'];
 console.log(dragons.includes('John'));

@@ -1,6 +1,3 @@
-// Clone an array
-let cloneArray = [].concat(otherArray);
-
 // Clone an object
 let obj = { name: 'test'};
 let cloneObject = {...obj};

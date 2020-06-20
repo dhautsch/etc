@@ -89,3 +89,7 @@ const newBonusArray = array.map((o) => {
           };
 });
 console.log(newBonusArray);
+
+// Clone an array
+let otherArray = [1,2,3];
+let cloneArray = [].concat(otherArray);

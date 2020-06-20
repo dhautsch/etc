@@ -1,10 +1,25 @@
 
+// Arrow functions
+function whereAmI(username, location) {
+    if (username && location) {
+        return "I am not lost";
+    } else {
+        return "I am totally lost!";
+    }
+}
 
+const whereAmI = (username, location) => (username && location) ? "I am not lost" : "I am totally lost!";
 
+// default arguments
+// default age to 10;
+function isValidAge(age=10) {
+    return age
+}
 
+const isValidAge = (age=10) => age;
 
-
-//Solve these problems:
+// return on Arrow function is needed if you do braces
+const isValidAge = (age=10) => { return age};
 
 //#1 Create a one line function that adds adds two parameters
 

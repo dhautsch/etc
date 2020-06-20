@@ -1,3 +1,9 @@
+//
+// https://babeljs.io
+// Babel is a JavaScript compiler.
+// Use next generation JavaScript, today.
+//
+
 // Clone an object
 let obj = { name: 'test'};
 let cloneObject = {...obj};

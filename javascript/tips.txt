@@ -4,6 +4,18 @@
 // Use next generation JavaScript, today.
 //
 
+// let vs var
+function x () {
+    var y = 1;
+    if (y > 0) {
+        var z = 2;
+    }
+    console.log(y);
+    
+    // prints z because only functions add scope for var, use let instead to scope z
+    console.log(z);
+}
+
 // Clone an object
 let obj = { name: 'test'};
 let cloneObject = {...obj};
@@ -11,28 +23,28 @@ let cloneObject = Object.assign({}, obj);
 let deepClone = JSON.parse(JSON.stringify(obj));
 
 // Destructuring
-var person = {
+let person = {
     firstName : "John",
     lastName  : "Doe",
     age       : 50,
     eyeColor  : "blue"
 };
 
-var firstName = person.firstName;
-var lastName = person.lastName;
-var age = person.age;
-var eyeColor = person.eyeColor;
+let firstName = person.firstName;
+let lastName = person.lastName;
+let age = person.age;
+let eyeColor = person.eyeColor;
 
 let { firstName, lastName, age, eyeColor} = person;
 // does not have to be all when destructuring
 let { firstName, lastName } = person;
 
 // Object properties
-var a = 'test';
-var b = true;
-var c = 789;
+let a = 'test';
+let b = true;
+let c = 789;
 
-var okObj = {
+let okObj = {
   a: a,
   b: b,
   c: c
@@ -42,5 +54,5 @@ var okObj = {
 let okObj = { a, b, c};
 
 // Template strings
-var message = "Hello " + firstName + " have I met you before? I think we met in " + city + " last summer no???";
+let message = "Hello " + firstName + " have I met you before? I think we met in " + city + " last summer no???";
 let message = `Hello ${firstName} have I met you before? I think we met in ${city} last summer no???`;

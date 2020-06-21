@@ -62,6 +62,22 @@ function biggestNumberInArray3(arr) {
   return highest;
 }
 
+//
+// for in is usually used to enumerate over objects
+// since Array is an an object it gives you the index
+//
+function biggestNumberInArray4(arr) {
+  let max_ = 0;
+
+  for (i_ in arr) {
+    if (arr[i_] > max_) {
+      max_ = arr[i_];
+    }
+  }
+
+  return max_;
+}
+
 // Question #2:
 // Write a function checkBasket() that lets you know if the item is in the basket or not
 amazonBasket = {

@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 #
 # This python script is used to parse the Get List Response from Share Point
-# returned from http://my_sp_server/my_sp_site/etl/_api/lists/getByTitle%28%27Our_Servers%27%29/items
+# returned from http://my_sp_server/my_sp_site/etl/_api/lists/getByTitle%28%27Servers%27%29/items
 #
 tree_ = ET.parse(sys.argv[1])
 root_ = tree_.getroot()

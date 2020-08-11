@@ -37,7 +37,7 @@ public class SPRest {
 
 	public static void main(String[] args) throws Exception {
 		Authenticator.setDefault(new MyAuthenticator());
-		String metaDataUrl_ = "http://sharepoint/eso-sites/etlinfraeng/etl/_api/lists/getbytitle('Tasks')";
+		String metaDataUrl_ = "https://yoyodyne.sharepoint.com/sites/etl/_api/lists/getbytitle('Tasks')";
 		String itemsUrl_ = metaDataUrl_ + "/items";
 		Document doc_;
 		ArrayList<HashMap<String, String>> al_;

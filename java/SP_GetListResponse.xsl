@@ -7,7 +7,7 @@ xmlns:georss="http://www.georss.org/georss"
 xmlns:m="http://schemas.microsoft.com/ado/2007/08/dataservices/metadata"
 xmlns:d="http://schemas.microsoft.com/ado/2007/08/dataservices"
 xmlns:xxx="http://www.w3.org/2005/Atom"
-xml:base="http://sharepoint/eso-sites/etlinfraeng/etl/_api/"
+xml:base="https://yoyodyne.sharepoint.com/sites/etl/_api/"
 >
 <!--
 

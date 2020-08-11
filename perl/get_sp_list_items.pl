@@ -38,7 +38,7 @@ my @DIGEST_KEYS = qw(
 my $DIGEST_KEYS_PAT = join('|', @DIGEST_KEYS);
 my $SP_DIGEST_OBJ;
 my $DEBUG_SP_LI;
-my @CONFIG_FILES = ( "$SCRIPT_DIR/config.properties" , "$ENV{HOME}/MPSTAT/config.properties", "$ENV{HOME}/etlsupp/config.properties" );
+my @CONFIG_FILES = ( "$SCRIPT_DIR/config.properties" , "$ENV{HOME}/config.properties" );
 my $TIME = time;
 my $EXIT = 1;
 my $VAR1;
@@ -850,9 +850,9 @@ import os
 import subprocess
 import json
 
-CMD = os.getenv("HOME") + "/etlsupp/bin/get_sp_list_items.pl"
-SP_LIST = "Our_Servers"
-URL = "http://sharepoint/sites/etl"
+CMD = os.getenv("HOME") + "/bin/get_sp_list_items.pl"
+SP_LIST = "Servers"
+URL = "https://yoyodyne.sharepoint.com/sites/etl"
 
 PROCESS = subprocess.Popen([CMD, "-json", "-meta", SP_LIST, URL], stdout=subprocess.PIPE)
 OUTPUT, UNUSED_ERR = PROCESS.communicate()
@@ -883,9 +883,9 @@ if RET_CODE == 0 :
 #!/usr/bin/perl
 
 use strict;
-my $CMD = "$ENV{HOME}/etlsupp/bin/get_sp_list_items.pl";
-my $SP_LIST = "Our_Servers";
-my $URL = "http://sharepoint/sites/etl";
+my $CMD = "$ENV{HOME}/bin/get_sp_list_items.pl";
+my $SP_LIST = "Servers";
+my $URL = "https://yoyodyne.sharepoint.com/sites/etl";
 my $VAR1 = qx($CMD -meta $SP_LIST $URL);
 my $TOP = '$top=';
 

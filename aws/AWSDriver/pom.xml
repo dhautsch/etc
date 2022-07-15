@@ -6,7 +6,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<properties>
 		<!-- <aws-sdk-version>1.11.130</aws-sdk-version> -->
-		<aws-sdk-version>1.11.364</aws-sdk-version>
+		<aws-sdk-version>1.12.261</aws-sdk-version>
 	</properties>
 
 	<dependencies>
